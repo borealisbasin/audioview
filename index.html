@@ -155,8 +155,8 @@
     .btn-cloud:active { transform: scale(0.97); }
 
     #cloud-status {
-      font-size: 10px; font-family: var(--font-mono); color: var(--accent-cyan);
-      text-align: center; min-height: 14px; margin-top: 4px;
+      font-size: 10.5px; font-family: var(--font-mono); color: var(--accent-cyan);
+      text-align: center; min-height: 14px; margin-top: 4px; line-height: 1.4;
     }
 
     /* Accordions e Sliders */
@@ -198,7 +198,7 @@
 
     input[type="text"] {
       width: 100%; background: var(--input-bg); border: 1px solid var(--border);
-      color: #fff; padding: 8px 10px; border-radius: 6px; font-size: 11px; outline: none;
+      color: #fff; padding: 9px 10px; border-radius: 6px; font-size: 11px; outline: none;
     }
 
     select {
@@ -277,15 +277,24 @@
       </button>
     </div>
 
-    <!-- SINCRONIZACAO EM NUVEM (PRESET NO FIREBASE) -->
+    <!-- BANCO DE PRESETS NO FIREBASE -->
     <details open>
-      <summary>Sincronizacao em Nuvem Firebase</summary>
+      <summary>Banco de Presets Firebase</summary>
       <div class="section-body">
         <label style="font-size: 10.5px; color: var(--text-muted); font-family: var(--font-mono);">Identificador ou Email</label>
         <input type="text" id="input-cloud-user" placeholder="ex: teste@teste ou meu_preset">
+
+        <label style="font-size: 10.5px; color: var(--text-muted); font-family: var(--font-mono);">Nome do Preset</label>
+        <input type="text" id="input-preset-name" placeholder="ex: Show_Doom_1 ou Ensaio_Fuzz">
+
+        <label style="font-size: 10.5px; color: var(--text-muted); font-family: var(--font-mono);">Presets Salvos na Conta</label>
+        <select id="select-cloud-presets">
+          <option value="">Nenhum preset carregado</option>
+        </select>
+
         <div style="display:flex; gap:6px;">
-          <button id="btn-cloud-save" class="btn-cloud btn-cloud-save">Salvar Preset na Nuvem</button>
-          <button id="btn-cloud-load" class="btn-cloud btn-cloud-load">Carregar Preset da Nuvem</button>
+          <button id="btn-cloud-save" class="btn-cloud btn-cloud-save">Salvar ou Atualizar Preset</button>
+          <button id="btn-cloud-load" class="btn-cloud btn-cloud-load">Carregar Preset</button>
         </div>
         <div id="cloud-status">Pronto para sincronizar</div>
       </div>
@@ -413,18 +422,18 @@
       </details>
     </div>
 
-    <!-- CONTROLES EXCLUSIVOS: ESTILO 2 (LIQUID TANK) -->
+    <!-- CONTROLES EXCLUSIVOS: ESTILO 2 (LIQUID TANK REESTRUTURADO) -->
     <div id="container-style-2" style="display:none;">
       <details open>
         <summary>Gradient Map Cores</summary>
         <div class="section-body">
           <div class="ctrl-row">
             <label>Fundo Shadows</label>
-            <input type="color" id="p2-col-shadow" value="#5c06c6">
+            <input type="color" id="p2-col-shadow" value="#36024c">
           </div>
           <div class="ctrl-row">
             <label>Corpo Oleo Midtones</label>
-            <input type="color" id="p2-col-mid" value="#bc6b52">
+            <input type="color" id="p2-col-mid" value="#bc523a">
           </div>
           <div class="ctrl-row">
             <label>Luz Highlights</label>
@@ -432,7 +441,7 @@
           </div>
           <div class="ctrl-row">
             <label>Cristas Color 4</label>
-            <input type="color" id="p2-col-c4" value="#ff0000">
+            <input type="color" id="p2-col-c4" value="#ff2200">
           </div>
           <div class="ctrl-row">
             <label>Preenchimento Fundo</label>
@@ -467,52 +476,52 @@
           </div>
           <div class="ctrl-row">
             <label>Densidade Celulas</label>
-            <input type="range" id="p2-cell-scale" min="2.0" max="14.0" step="0.5" value="7.5">
-            <span class="ctrl-val" id="v2-cell-scale">7.5</span>
+            <input type="range" id="p2-cell-scale" min="2.0" max="14.0" step="0.5" value="6.5">
+            <span class="ctrl-val" id="v2-cell-scale">6.5</span>
           </div>
           <div class="ctrl-row">
             <label>Splash Grave</label>
-            <input type="range" id="p2-splash-force" min="0.5" max="5.0" step="0.1" value="2.2">
-            <span class="ctrl-val" id="v2-splash-force">2.2</span>
+            <input type="range" id="p2-splash-force" min="0.5" max="5.0" step="0.1" value="2.0">
+            <span class="ctrl-val" id="v2-splash-force">2.0</span>
           </div>
           <div class="ctrl-row">
             <label>Brilho Especular</label>
-            <input type="range" id="p2-fluid-gloss" min="0.2" max="4.0" step="0.1" value="1.8">
-            <span class="ctrl-val" id="v2-fluid-gloss">1.8</span>
+            <input type="range" id="p2-fluid-gloss" min="0.2" max="3.0" step="0.1" value="1.4">
+            <span class="ctrl-val" id="v2-fluid-gloss">1.4</span>
           </div>
           <div class="ctrl-row">
             <label>Filme Oleoso</label>
-            <input type="range" id="p2-irid-sheen" min="0.0" max="2.0" step="0.1" value="0.5">
-            <span class="ctrl-val" id="v2-irid-sheen">0.5</span>
+            <input type="range" id="p2-irid-sheen" min="0.0" max="1.5" step="0.05" value="0.45">
+            <span class="ctrl-val" id="v2-irid-sheen">0.45</span>
           </div>
           <div class="ctrl-row">
             <label>Viscosidade Dobras</label>
-            <input type="range" id="p2-visc-tension" min="0.5" max="4.0" step="0.1" value="2.0">
-            <span class="ctrl-val" id="v2-visc-tension">2.0</span>
+            <input type="range" id="p2-visc-tension" min="0.5" max="4.0" step="0.1" value="1.8">
+            <span class="ctrl-val" id="v2-visc-tension">1.8</span>
           </div>
         </div>
       </details>
     </div>
 
-    <!-- CONTROLES EXCLUSIVOS: ESTILO 3 (PSYCHO KALEIDO) -->
+    <!-- CONTROLES EXCLUSIVOS: ESTILO 3 (PSYCHO KALEIDO FLUIDO) -->
     <div id="container-style-3" style="display:none;">
       <details open>
         <summary>Geometria Psycho Kaleido</summary>
         <div class="section-body">
           <div class="ctrl-row">
             <label>Segmentos Petalas</label>
-            <input type="range" id="p3-segments" min="2" max="16" step="1" value="8">
+            <input type="range" id="p3-segments" min="4" max="14" step="1" value="8">
             <span class="ctrl-val" id="v3-segments">8</span>
           </div>
           <div class="ctrl-row">
             <label>Rotacao Organica</label>
-            <input type="range" id="p3-rot-speed" min="-2.0" max="2.0" step="0.1" value="0.4">
-            <span class="ctrl-val" id="v3-rot-speed">0.4</span>
+            <input type="range" id="p3-rot-speed" min="-2.0" max="2.0" step="0.1" value="0.35">
+            <span class="ctrl-val" id="v3-rot-speed">0.35</span>
           </div>
           <div class="ctrl-row">
             <label>Densidade Fractal</label>
-            <input type="range" id="p3-density" min="0.5" max="6.0" step="0.1" value="2.8">
-            <span class="ctrl-val" id="v3-density">2.8</span>
+            <input type="range" id="p3-density" min="0.5" max="5.0" step="0.1" value="2.2">
+            <span class="ctrl-val" id="v3-density">2.2</span>
           </div>
           <div class="ctrl-row">
             <label>Zoom Expansivo</label>
@@ -521,13 +530,13 @@
           </div>
           <div class="ctrl-row">
             <label>Torcao Vortex</label>
-            <input type="range" id="p3-twist" min="-3.0" max="3.0" step="0.1" value="0.6">
-            <span class="ctrl-val" id="v3-twist">0.6</span>
+            <input type="range" id="p3-twist" min="-3.0" max="3.0" step="0.1" value="0.5">
+            <span class="ctrl-val" id="v3-twist">0.5</span>
           </div>
           <div class="ctrl-row">
             <label>Contraste Poster</label>
-            <input type="range" id="p3-contrast" min="0.5" max="3.0" step="0.1" value="1.6">
-            <span class="ctrl-val" id="v3-contrast">1.6</span>
+            <input type="range" id="p3-contrast" min="0.5" max="3.0" step="0.1" value="1.4">
+            <span class="ctrl-val" id="v3-contrast">1.4</span>
           </div>
         </div>
       </details>
@@ -537,15 +546,15 @@
         <div class="section-body">
           <div class="ctrl-row">
             <label>Cor Profunda Base</label>
-            <input type="color" id="p3-col1" value="#260059">
+            <input type="color" id="p3-col1" value="#220044">
           </div>
           <div class="ctrl-row">
             <label>Cor Vibrante Meio</label>
-            <input type="color" id="p3-col2" value="#ff4000">
+            <input type="color" id="p3-col2" value="#ff3a00">
           </div>
           <div class="ctrl-row">
             <label>Cor Arestas Luz</label>
-            <input type="color" id="p3-col3" value="#00f2d9">
+            <input type="color" id="p3-col3" value="#00f5d4">
           </div>
         </div>
       </details>
@@ -629,7 +638,7 @@
     uniform float u_ringScale;
     uniform bool u_mirrorRings;
 
-    // ESTILO 2 UNIFORMS
+    // ESTILO 2 UNIFORMS (LIQUID TANK)
     uniform vec3 u_colShadow;
     uniform vec3 u_colMid;
     uniform vec3 u_colHigh;
@@ -676,11 +685,12 @@
       return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
     }
 
+    // FBM Otimizado de 3 camadas para mobile
     float fbm(vec2 p) {
       float v = 0.0;
       float a = 0.5;
       mat2 rot = mat2(0.877, 0.479, -0.479, 0.877);
-      for (int i = 0; i < 4; i++) {
+      for (int i = 0; i < 3; i++) {
         v += a * noise(p);
         p = rot * p * 2.02 + vec2(10.0);
         a *= 0.5;
@@ -711,23 +721,22 @@
       return (w1 * 0.7 + w2 * 0.3) * amt;
     }
 
-    float getFluidHeight(vec2 p) {
+    // Relevo Otimizado e Suave para Estilo 2 (Sem travamentos em GPU mobile)
+    float getFluidHeightOpt(vec2 p) {
       float r = length(p);
       vec2 dir = normalize(p + 0.0001);
-      float splashWave = sin(r * 4.2 - u_wavePhase * 2.5) * (u_bass * u_splashForce);
-      float fuzzWarp = 1.0 + u_fuzzDrive * 1.8;
+      float splashWave = sin(r * 3.8 - u_wavePhase * 2.2) * (u_bass * u_splashForce * 0.6);
+      float fuzzWarp = 1.0 + u_fuzzDrive * 1.2;
+
       vec2 q = vec2(
-        fbm(p + vec2(u_wavePhase * 0.12 * fuzzWarp)),
-        fbm(p + vec2(4.8, 1.2) + vec2(u_wavePhase * 0.12 * fuzzWarp))
+        noise(p + vec2(u_wavePhase * 0.08 * fuzzWarp)),
+        noise(p + vec2(3.8, 1.2) + vec2(u_wavePhase * 0.08 * fuzzWarp))
       );
       vec2 rWarp = vec2(
-        fbm(p + u_viscTension * q + vec2(1.7, 9.2) + vec2(u_spinPhase * 0.1)),
-        fbm(p + u_viscTension * q + vec2(8.3, 2.8) + vec2(u_spinPhase * 0.1))
+        noise(p + u_viscTension * q + vec2(1.7, 7.2) + vec2(u_spinPhase * 0.08)),
+        noise(p + u_viscTension * q + vec2(7.3, 2.8) + vec2(u_spinPhase * 0.08))
       );
-      float marble = fbm(p + u_viscTension * rWarp + splashWave * dir * 0.12);
-      vec2 vCell = voronoi((p + rWarp * 0.6) * u_cellScale);
-      float cellBorder = smoothstep(0.04 * u_gapSize, 0.26 * u_gapSize, vCell.y - vCell.x);
-      return marble * 0.65 + (1.0 - cellBorder) * 0.45;
+      return fbm(p + u_viscTension * rWarp + splashWave * dir * 0.08);
     }
 
     // RENDERIZADOR ESPECIFICO DO ESTILO 1 (DOT GRID)
@@ -790,25 +799,25 @@
       return finalCol / (1.0 + finalCol * 0.35);
     }
 
-    // RENDERIZADOR ESPECIFICO DO ESTILO 2 (LIQUID TANK)
+    // RENDERIZADOR ESPECIFICO DO ESTILO 2 (LIQUID TANK REESTRUTURADO E SUAVE)
     vec3 renderStyle2(vec2 uv) {
-      vec2 p = uv * 2.2;
-      float eps = 0.0035;
-      float hC = getFluidHeight(p);
-      float hR = getFluidHeight(p + vec2(eps, 0.0));
-      float hU = getFluidHeight(p + vec2(0.0, eps));
+      vec2 p = uv * 2.0;
+      float eps = 0.006;
+      float hC = getFluidHeightOpt(p);
+      float hR = getFluidHeightOpt(p + vec2(eps, 0.0));
+      float hU = getFluidHeightOpt(p + vec2(0.0, eps));
 
-      vec3 normal = normalize(vec3((hC - hR) * u_fluidGloss * 1.5, (hC - hU) * u_fluidGloss * 1.5, eps * 3.0));
+      vec3 normal = normalize(vec3((hC - hR) * u_fluidGloss, (hC - hU) * u_fluidGloss, eps * 1.8));
       vec3 lightDir = normalize(vec3(0.5, 0.7, 1.1));
       vec3 viewDir = vec3(0.0, 0.0, 1.0);
       vec3 halfVec = normalize(lightDir + viewDir);
 
       float diff = max(dot(normal, lightDir), 0.0);
-      float spec = pow(max(dot(normal, halfVec), 0.0), 32.0) * (0.4 + u_treble * 1.8 + u_fuzzDrive * 1.2);
-      float fresnel = pow(1.0 - max(dot(normal, viewDir), 0.0), 2.5);
+      float spec = pow(max(dot(normal, halfVec), 0.0), 24.0) * (0.3 + u_treble * 1.2 + u_fuzzDrive * 0.8);
+      float fresnel = pow(1.0 - max(dot(normal, viewDir), 0.0), 2.2);
 
-      vec3 irid = 0.5 + 0.5 * cos(TAU * (vec3(normal.x, normal.y, normal.z) * 1.2 + vec3(u_wavePhase * 0.08) + vec3(0.0, 0.33, 0.67)));
-      float mapPos = clamp((hC - 0.15) / 0.75 + u_gradShift, 0.0, 1.0);
+      vec3 irid = 0.5 + 0.5 * cos(TAU * (vec3(normal.x, normal.y, normal.z) * 1.2 + vec3(u_wavePhase * 0.06) + vec3(0.0, 0.33, 0.67)));
+      float mapPos = clamp(hC * 0.85 + u_gradShift, 0.0, 1.0);
       vec3 baseCol;
       if (mapPos < 0.333) {
         baseCol = mix(u_colShadow, u_colMid, mapPos / 0.333);
@@ -818,46 +827,53 @@
         baseCol = mix(u_colHigh, u_colC4, (mapPos - 0.666) / 0.334);
       }
 
-      vec3 fluidCol = baseCol * (0.45 + diff * 0.55);
-      fluidCol += irid * fresnel * (u_iridSheen + u_fuzzDrive * 0.4) * 0.45;
-      fluidCol += vec3(1.0, 0.98, 0.92) * spec * (u_fluidGloss * 0.35);
+      // Adiciona cavidades organicas celulares de forma analitica leve
+      vec2 vCell = voronoi(p * (u_cellScale * 0.6));
+      float cellBorder = smoothstep(0.04 * u_gapSize, 0.22 * u_gapSize, vCell.y - vCell.x);
+      float cellCoverage = mix(cellBorder, 1.0, u_bgFill);
 
-      float valleyMask = smoothstep(0.08 * u_gapSize, 0.30 * u_gapSize, hC);
-      float finalCoverage = mix(valleyMask, 1.0, u_bgFill);
+      vec3 fluidCol = baseCol * (0.50 + diff * 0.50);
+      fluidCol += irid * fresnel * (u_iridSheen + u_fuzzDrive * 0.3) * 0.35;
+      fluidCol += vec3(0.95, 0.98, 1.0) * spec * (u_fluidGloss * 0.25);
 
-      vec3 backgroundLayer = u_colShadow * (0.30 + diff * 0.35);
-      fluidCol = mix(backgroundLayer, fluidCol, finalCoverage);
+      vec3 backgroundLayer = u_colShadow * (0.35 + diff * 0.30);
+      fluidCol = mix(backgroundLayer, fluidCol, cellCoverage);
       fluidCol *= smoothstep(1.5, 0.3, length(uv));
-      return fluidCol / (1.0 + fluidCol * 0.3);
+
+      // Tone mapping suave que impede qualquer estouramento em branco
+      return fluidCol / (1.0 + fluidCol * 0.4);
     }
 
-    // RENDERIZADOR ESPECIFICO DO ESTILO 3 (PSYCHO KALEIDO 60S/70S POSTER)
+    // RENDERIZADOR ESPECIFICO DO ESTILO 3 (PSYCHO KALEIDO FLUIDO E RAPIDO)
     vec3 renderStyle3(vec2 uv) {
       float r = length(uv);
       float theta = atan(uv.y, uv.x);
 
-      float dynamicRot = u_p3RotPhase + r * (u_p3Twist + u_mid * 1.5 + u_fuzzDrive * 2.2);
+      // Rotacao organica com torcao e turbulencia Fuzz
+      float dynamicRot = u_p3RotPhase + r * (u_p3Twist + u_mid * 1.2 + u_fuzzDrive * 1.6);
       theta += dynamicRot;
 
+      // Dobramento caleidoscopico de N petalas
       float seg = TAU / max(u_p3Segments, 2.0);
       theta = mod(theta, seg) - seg * 0.5;
       theta = abs(theta);
 
       vec2 kp = vec2(cos(theta), sin(theta)) * r / max(u_p3Zoom, 0.1);
-      kp /= (1.0 + u_bass * 0.65);
+      kp /= (1.0 + u_bass * 0.55); // Zoom pulsante nos graves
 
-      float fuzzTurb = 1.0 + u_fuzzDrive * 2.2;
-      vec2 q = vec2(
-        fbm(kp * u_p3Density + vec2(u_wavePhase * 0.1 * fuzzTurb)),
-        fbm(kp * u_p3Density + vec2(3.1, 1.7) + vec2(u_wavePhase * 0.1 * fuzzTurb))
-      );
-      vec2 w = vec2(
-        fbm(kp * u_p3Density + 2.5 * q + vec2(1.2, 7.4)),
-        fbm(kp * u_p3Density + 2.5 * q + vec2(6.8, 2.5))
-      );
-      float f = fbm(kp * u_p3Density + 3.0 * w);
+      // Calculo fractal iterativo rapido (Sem travar a GPU)
+      vec2 z = kp * u_p3Density;
+      float acc = 0.0;
+      float fuzzAmt = 1.0 + u_fuzzDrive * 1.5;
+      
+      for (int i = 0; i < 3; i++) {
+        z = abs(z) - vec2(0.35, 0.30);
+        z = z * mat2(0.8, -0.6, 0.6, 0.8);
+        acc += sin(z.x * 3.5 + u_wavePhase * 0.2 * fuzzAmt) * cos(z.y * 3.5);
+      }
 
-      float t = clamp(f * u_p3Contrast, 0.0, 1.0);
+      // Gradiente saturado harmônico estilo pôster 60s/70s
+      float t = clamp((acc * 0.35 + 0.5) * u_p3Contrast, 0.0, 1.0);
       vec3 kCol;
       if (t < 0.5) {
         kCol = mix(u_p3Col1, u_p3Col2, t / 0.5);
@@ -865,15 +881,17 @@
         kCol = mix(u_p3Col2, u_p3Col3, (t - 0.5) / 0.5);
       }
 
-      float edge = abs(sin(f * 18.0 + u_treble * 4.0));
-      float border = smoothstep(0.02, 0.18, edge);
-      kCol = mix(vec3(0.04, 0.01, 0.06), kCol, border);
+      // Contornos de alto contraste estilo vitral
+      float edge = abs(sin(acc * 4.0 + u_treble * 3.0));
+      float border = smoothstep(0.04, 0.20, edge);
+      kCol = mix(vec3(0.03, 0.01, 0.05), kCol, border);
 
-      float trebEdge = pow(1.0 - border, 2.0) * (0.6 + u_treble * 2.5);
+      // Brilho reativo nas arestas externas (Agudos)
+      float trebEdge = (1.0 - border) * (0.4 + u_treble * 2.0);
       kCol += u_p3Col3 * trebEdge;
 
       kCol *= smoothstep(1.5, 0.3, length(uv));
-      return kCol / (1.0 + kCol * 0.25);
+      return kCol / (1.0 + kCol * 0.3);
     }
 
     vec3 evaluateStyle(float s, vec2 uv) {
@@ -883,7 +901,7 @@
     }
 
     void main() {
-      // MODO GRADE DE ALINHAMENTO
+      // MODO GRADE DE ALINHAMENTO LIMPO
       if (u_isGridMode) {
         vec2 cellCount = vec2(16.0, 16.0 * (u_resolution.y / u_resolution.x));
         vec2 gridCoords = vUv * cellCount;
@@ -1063,7 +1081,7 @@
             this.wavePhase += (p2Idle || 0.08) * dt;
             this.spinPhase += ((p2Idle || 0.08) * 0.5) * dt;
           } else if (activeStyle === 2) {
-            this.p3RotPhase += (p3RotSpeed !== undefined ? p3RotSpeed : 0.4) * dt;
+            this.p3RotPhase += (p3RotSpeed !== undefined ? p3RotSpeed : 0.35) * dt;
           }
           return;
         }
@@ -1117,10 +1135,10 @@
           this.wavePhase += (idle + waveMotion) * dt;
           this.spinPhase += (idle * 0.5 + spinMotion) * dt;
         } else {
-          const rotBase = (p3RotSpeed !== undefined ? p3RotSpeed : 0.4);
-          const rotReactivity = (this.energy.mid * 1.8 + this.fuzzDrive * 3.0);
+          const rotBase = (p3RotSpeed !== undefined ? p3RotSpeed : 0.35);
+          const rotReactivity = (this.energy.mid * 1.6 + this.fuzzDrive * 2.5);
           this.p3RotPhase += (rotBase + rotReactivity) * dt;
-          this.wavePhase += (this.energy.bass * 4.0 + this.fuzzDrive * 3.0) * dt;
+          this.wavePhase += (this.energy.bass * 3.5 + this.fuzzDrive * 2.5) * dt;
         }
       }
     }
@@ -1143,7 +1161,7 @@
       }
 
       load() {
-        const saved = localStorage.getItem('audioview_pins_v12');
+        const saved = localStorage.getItem('audioview_pins_v14');
         if (saved) {
           try {
             const pts = JSON.parse(saved);
@@ -1169,8 +1187,8 @@
         ];
       }
 
-      save() { localStorage.setItem('audioview_pins_v12', JSON.stringify(this.points)); }
-      reset() { localStorage.removeItem('audioview_pins_v12'); this.resetToDefault(); this.sync(); this.updateMatrix(); }
+      save() { localStorage.setItem('audioview_pins_v14', JSON.stringify(this.points)); }
+      reset() { localStorage.removeItem('audioview_pins_v14'); this.resetToDefault(); this.sync(); this.updateMatrix(); }
 
       createPins() {
         for (let i = 0; i < 4; i++) {
@@ -1307,22 +1325,22 @@
           concentricEnable: true, ringScale: 2.96, mirrorRings: true
         };
 
-        // Estilo 2 (Liquid Tank)
+        // Estilo 2 (Liquid Tank Reestruturado)
         this.s2 = {
           audio: { smoothing: 0.72, sens: 5.5, gain: 1.4, gate: 0.035, bassAtt: 0.75 },
-          colShadow: [0.36, 0.02, 0.77],
-          colMid: [0.73, 0.42, 0.32],
+          colShadow: [0.21, 0.01, 0.30],
+          colMid: [0.74, 0.32, 0.23],
           colHigh: [0.0, 0.83, 1.0],
-          colC4: [1.0, 0.0, 0.0],
+          colC4: [1.0, 0.13, 0.0],
           bgFill: 0.80,
           gapSize: 0.7,
-          cellScale: 7.5,
+          cellScale: 6.5,
           gradShift: 0.0,
           idleSpeed: 0.08,
-          splashForce: 2.2,
-          fluidGloss: 1.8,
-          iridSheen: 0.5,
-          viscTension: 2.0,
+          splashForce: 2.0,
+          fluidGloss: 1.4,
+          iridSheen: 0.45,
+          viscTension: 1.8,
           trailEnable: false,
           persistence: 0.0,
           zoomRate: 1.000
@@ -1332,14 +1350,14 @@
         this.s3 = {
           audio: { smoothing: 0.70, sens: 5.8, gain: 1.5, gate: 0.03, bassAtt: 0.70 },
           segments: 8,
-          rotSpeed: 0.4,
-          density: 2.8,
+          rotSpeed: 0.35,
+          density: 2.2,
           zoom: 1.0,
-          twist: 0.6,
-          contrast: 1.6,
-          col1: [0.15, 0.0, 0.35], // Roxo profundo
-          col2: [1.0, 0.25, 0.0],  // Laranja acido
-          col3: [0.0, 0.95, 0.85], // Ciano neon
+          twist: 0.5,
+          contrast: 1.4,
+          col1: [0.13, 0.0, 0.27], // Roxo profundo base
+          col2: [1.0, 0.23, 0.0],  // Laranja psicodelico
+          col3: [0.0, 0.96, 0.83], // Ciano neon cristas
           trailEnable: false,
           persistence: 0.0,
           zoomRate: 1.000
@@ -1355,9 +1373,12 @@
           const v = gl.createShader(gl.VERTEX_SHADER);
           const f = gl.createShader(gl.FRAGMENT_SHADER);
           gl.shaderSource(v, vs); gl.compileShader(v);
+          if (!gl.getShaderParameter(v, gl.COMPILE_STATUS)) console.error("Vertex Error:", gl.getShaderInfoLog(v));
           gl.shaderSource(f, fs); gl.compileShader(f);
+          if (!gl.getShaderParameter(f, gl.COMPILE_STATUS)) console.error("Fragment Error:", gl.getShaderInfoLog(f));
           gl.attachShader(p, v); gl.attachShader(p, f);
           gl.linkProgram(p);
+          if (!gl.getProgramParameter(p, gl.LINK_STATUS)) console.error("Program Link Error:", gl.getProgramInfoLog(p));
           return p;
         };
 
@@ -1550,31 +1571,31 @@
         gl.uniform1f(this.uD.ringScale, p1.ringScale || 2.96);
         gl.uniform1i(this.uD.mirrorRings, p1.mirrorRings ? 1 : 0);
 
-        // Passagem Estilo 2
+        // Passagem Estilo 2 (Liquid Tank Reestruturado)
         const p2 = this.s2;
-        gl.uniform3fv(this.uD.colShadow, p2.colShadow || [0.36, 0.02, 0.77]);
-        gl.uniform3fv(this.uD.colMid, p2.colMid || [0.73, 0.42, 0.32]);
+        gl.uniform3fv(this.uD.colShadow, p2.colShadow || [0.21, 0.01, 0.30]);
+        gl.uniform3fv(this.uD.colMid, p2.colMid || [0.74, 0.32, 0.23]);
         gl.uniform3fv(this.uD.colHigh, p2.colHigh || [0.0, 0.83, 1.0]);
-        gl.uniform3fv(this.uD.colC4, p2.colC4 || [1.0, 0.0, 0.0]);
+        gl.uniform3fv(this.uD.colC4, p2.colC4 || [1.0, 0.13, 0.0]);
         gl.uniform1f(this.uD.bgFill, p2.bgFill !== undefined ? p2.bgFill : 0.8);
         gl.uniform1f(this.uD.gapSize, p2.gapSize || 0.7);
-        gl.uniform1f(this.uD.cellScale, p2.cellScale || 7.5);
+        gl.uniform1f(this.uD.cellScale, p2.cellScale || 6.5);
         gl.uniform1f(this.uD.gradShift, p2.gradShift || 0.0);
-        gl.uniform1f(this.uD.splashForce, p2.splashForce || 2.2);
-        gl.uniform1f(this.uD.fluidGloss, p2.fluidGloss || 1.8);
-        gl.uniform1f(this.uD.iridSheen, p2.iridSheen !== undefined ? p2.iridSheen : 0.5);
-        gl.uniform1f(this.uD.viscTension, p2.viscTension || 2.0);
+        gl.uniform1f(this.uD.splashForce, p2.splashForce || 2.0);
+        gl.uniform1f(this.uD.fluidGloss, p2.fluidGloss || 1.4);
+        gl.uniform1f(this.uD.iridSheen, p2.iridSheen !== undefined ? p2.iridSheen : 0.45);
+        gl.uniform1f(this.uD.viscTension, p2.viscTension || 1.8);
 
-        // Passagem Estilo 3
+        // Passagem Estilo 3 (Psycho Kaleido)
         const p3 = this.s3;
         gl.uniform1f(this.uD.p3Segments, p3.segments || 8.0);
-        gl.uniform1f(this.uD.p3Density, p3.density || 2.8);
+        gl.uniform1f(this.uD.p3Density, p3.density || 2.2);
         gl.uniform1f(this.uD.p3Zoom, p3.zoom || 1.0);
-        gl.uniform1f(this.uD.p3Twist, p3.twist || 0.6);
-        gl.uniform1f(this.uD.p3Contrast, p3.contrast || 1.6);
-        gl.uniform3fv(this.uD.p3Col1, p3.col1 || [0.15, 0.0, 0.35]);
-        gl.uniform3fv(this.uD.p3Col2, p3.col2 || [1.0, 0.25, 0.0]);
-        gl.uniform3fv(this.uD.p3Col3, p3.col3 || [0.0, 0.95, 0.85]);
+        gl.uniform1f(this.uD.p3Twist, p3.twist || 0.5);
+        gl.uniform1f(this.uD.p3Contrast, p3.contrast || 1.4);
+        gl.uniform3fv(this.uD.p3Col1, p3.col1 || [0.13, 0.0, 0.27]);
+        gl.uniform3fv(this.uD.p3Col2, p3.col2 || [1.0, 0.23, 0.0]);
+        gl.uniform3fv(this.uD.p3Col3, p3.col3 || [0.0, 0.96, 0.83]);
 
         gl.drawArrays(gl.TRIANGLES, 0, 6);
 
@@ -1641,7 +1662,7 @@
       document.addEventListener('touchstart', () => requestWakeLock(), { once: true });
       document.addEventListener('click', () => requestWakeLock(), { once: true });
 
-      // Gestos de Zoom Global
+      // Gestos de Zoom Global (Scroll PC e Pinca Celular)
       const stage = document.getElementById('projection-stage');
 
       window.addEventListener('wheel', (e) => {
@@ -1694,7 +1715,7 @@
       stage.addEventListener('touchend', endPinch);
       stage.addEventListener('touchcancel', endPinch);
 
-      // Loop de Audio e Render
+      // Loop Principal
       const specCanvas = document.getElementById('spectrum-canvas');
       const specCtx = specCanvas.getContext('2d');
 
@@ -1744,7 +1765,7 @@
 
       function getCompleteSystemPreset() {
         return {
-          version: "v14",
+          version: "v15",
           timestamp: new Date().toISOString(),
           activeStyle: renderer.activeStyle,
           s1: renderer.s1,
@@ -1773,7 +1794,7 @@
       }
 
       function saveAllState() {
-        localStorage.setItem('audioview_state_v14', JSON.stringify({
+        localStorage.setItem('audioview_state_v15', JSON.stringify({
           s1: renderer.s1,
           s2: renderer.s2,
           s3: renderer.s3,
@@ -1782,7 +1803,7 @@
       }
 
       function loadAllState() {
-        const saved = localStorage.getItem('audioview_state_v14');
+        const saved = localStorage.getItem('audioview_state_v15');
         if (saved) {
           try {
             const data = JSON.parse(saved);
@@ -1884,7 +1905,7 @@
           setV2('p2-idle-speed', p.idleSpeed, 2);
           setV2('p2-splash-force', p.splashForce, 1);
           setV2('p2-fluid-gloss', p.fluidGloss, 1);
-          setV2('p2-irid-sheen', p.iridSheen, 1);
+          setV2('p2-irid-sheen', p.iridSheen, 2);
 
         } else {
           const p = renderer.s3;
@@ -1893,7 +1914,7 @@
             if (el) { el.value = val; const vEl = document.getElementById(id.replace('p3-', 'v3-')); if (vEl) vEl.innerText = (fixed !== undefined) ? Number(val).toFixed(fixed) : val; }
           };
           setV3('p3-segments', p.segments);
-          setV3('p3-rot-speed', p.rotSpeed, 1);
+          setV3('p3-rot-speed', p.rotSpeed, 2);
           setV3('p3-density', p.density, 1);
           setV3('p3-zoom', p.zoom, 2);
           setV3('p3-twist', p.twist, 1);
@@ -1909,7 +1930,6 @@
         }
       }
 
-      // Funcao de Comutacao Suave de Estilos
       function switchStyle(targetIndex) {
         if (renderer.activeStyle === targetIndex) return;
         renderer.prevStyle = renderer.activeStyle;
@@ -1948,36 +1968,107 @@
       btnGrid.addEventListener('click', enterGridMode);
       btnGridSaveExit.addEventListener('click', exitGridMode);
 
-      // Sincronizacao em Nuvem Firebase
+      // =========================================================================
+      // BANCO DE PRESETS NO FIREBASE FIRESTORE
+      // =========================================================================
       const inputCloudUser = document.getElementById('input-cloud-user');
+      const inputPresetName = document.getElementById('input-preset-name');
+      const selectCloudPresets = document.getElementById('select-cloud-presets');
       const btnCloudSave = document.getElementById('btn-cloud-save');
       const btnCloudLoad = document.getElementById('btn-cloud-load');
       const cloudStatus = document.getElementById('cloud-status');
 
-      function sanitizeId(str) {
+      function sanitizeKey(str) {
         return (str || '').trim().toLowerCase().replace(/[^a-z0-9_@.]/g, '_');
       }
 
-      const savedLastUser = localStorage.getItem('audioview_last_cloud_user');
-      if (savedLastUser) inputCloudUser.value = savedLastUser;
+      const savedLastUser = localStorage.getItem('audioview_last_user');
+      if (savedLastUser) {
+        inputCloudUser.value = savedLastUser;
+        fetchUserPresetList(savedLastUser);
+      }
+
+      async function fetchUserPresetList(userKey) {
+        if (!db) return;
+        const cleanUser = sanitizeKey(userKey);
+        if (!cleanUser) return;
+        try {
+          const docSnap = await getDoc(doc(db, "presets", cleanUser));
+          selectCloudPresets.innerHTML = '';
+          if (docSnap.exists() && docSnap.data().presets) {
+            const list = docSnap.data().presets;
+            const names = Object.keys(list);
+            if (names.length === 0) {
+              selectCloudPresets.innerHTML = '<option value="">Nenhum preset salvo</option>';
+              return;
+            }
+            names.forEach(name => {
+              const opt = document.createElement('option');
+              opt.value = name;
+              opt.textContent = name;
+              selectCloudPresets.appendChild(opt);
+            });
+            inputPresetName.value = selectCloudPresets.value;
+          } else {
+            selectCloudPresets.innerHTML = '<option value="">Nenhum preset salvo</option>';
+          }
+        } catch (e) {
+          console.warn("Falha ao listar presets:", e);
+        }
+      }
+
+      inputCloudUser.addEventListener('change', () => {
+        fetchUserPresetList(inputCloudUser.value);
+      });
+
+      selectCloudPresets.addEventListener('change', () => {
+        if (selectCloudPresets.value) {
+          inputPresetName.value = selectCloudPresets.value;
+        }
+      });
 
       btnCloudSave.addEventListener('click', async () => {
         if (!db) {
           cloudStatus.innerText = "Erro: Firebase nao inicializado";
           return;
         }
-        const cleanUser = sanitizeId(inputCloudUser.value);
+        const cleanUser = sanitizeKey(inputCloudUser.value);
+        const presetName = (inputPresetName.value || '').trim().replace(/[^a-zA-Z0-9_]/g, '_');
+
         if (!cleanUser) {
-          cloudStatus.innerText = "Digite um identificador valido";
+          cloudStatus.innerText = "Informe um identificador ou email valido";
+          return;
+        }
+        if (!presetName) {
+          cloudStatus.innerText = "Informe um nome para o preset";
           return;
         }
 
-        cloudStatus.innerText = "Salvando na nuvem...";
+        cloudStatus.innerText = "Salvando preset na nuvem...";
         try {
-          const state = getCompleteSystemPreset();
-          await setDoc(doc(db, "presets", cleanUser), state);
-          localStorage.setItem('audioview_last_cloud_user', cleanUser);
-          cloudStatus.innerText = "Preset salvo com sucesso na nuvem";
+          const docRef = doc(db, "presets", cleanUser);
+          const docSnap = await getDoc(docRef);
+          let currentPresets = {};
+          if (docSnap.exists() && docSnap.data().presets) {
+            currentPresets = docSnap.data().presets;
+          }
+
+          currentPresets[presetName] = {
+            name: presetName,
+            updatedAt: new Date().toISOString(),
+            data: getCompleteSystemPreset()
+          };
+
+          await setDoc(docRef, {
+            user: cleanUser,
+            updatedAt: new Date().toISOString(),
+            presets: currentPresets
+          });
+
+          localStorage.setItem('audioview_last_user', cleanUser);
+          await fetchUserPresetList(cleanUser);
+          selectCloudPresets.value = presetName;
+          cloudStatus.innerText = `Preset ${presetName} salvo com sucesso`;
         } catch (err) {
           console.error(err);
           cloudStatus.innerText = "Erro ao salvar: " + err.message;
@@ -1989,23 +2080,26 @@
           cloudStatus.innerText = "Erro: Firebase nao inicializado";
           return;
         }
-        const cleanUser = sanitizeId(inputCloudUser.value);
-        if (!cleanUser) {
-          cloudStatus.innerText = "Digite um identificador valido";
+        const cleanUser = sanitizeKey(inputCloudUser.value);
+        const presetName = (inputPresetName.value || selectCloudPresets.value || '').trim().replace(/[^a-zA-Z0-9_]/g, '_');
+
+        if (!cleanUser || !presetName) {
+          cloudStatus.innerText = "Informe o usuario e o nome do preset";
           return;
         }
 
-        cloudStatus.innerText = "Carregando da nuvem...";
+        cloudStatus.innerText = "Buscando preset na nuvem...";
         try {
           const docSnap = await getDoc(doc(db, "presets", cleanUser));
-          if (!docSnap.exists()) {
-            cloudStatus.innerText = "Usuario ou preset nao encontrado";
+          if (!docSnap.exists() || !docSnap.data().presets || !docSnap.data().presets[presetName]) {
+            cloudStatus.innerText = `Preset ${presetName} nao encontrado`;
             return;
           }
-          const data = docSnap.data();
-          applyCompleteSystemPreset(data);
-          localStorage.setItem('audioview_last_cloud_user', cleanUser);
-          cloudStatus.innerText = "Preset carregado com sucesso";
+
+          const targetPreset = docSnap.data().presets[presetName].data;
+          applyCompleteSystemPreset(targetPreset);
+          localStorage.setItem('audioview_last_user', cleanUser);
+          cloudStatus.innerText = `Preset ${presetName} carregado com sucesso`;
         } catch (err) {
           console.error(err);
           cloudStatus.innerText = "Erro ao carregar: " + err.message;
@@ -2019,11 +2113,12 @@
 
       btnExportJson.addEventListener('click', () => {
         const state = getCompleteSystemPreset();
+        const pName = (inputPresetName.value || 'preset').trim().replace(/[^a-zA-Z0-9_]/g, '_');
         const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `audioview_preset_${new Date().toISOString().slice(0,10)}.json`;
+        a.download = `audioview_${pName}_${new Date().toISOString().slice(0,10)}.json`;
         a.click();
         URL.revokeObjectURL(url);
       });
@@ -2147,7 +2242,8 @@
 
       bindP2Slider('p2-splash-force', 'splashForce', true, 1);
       bindP2Slider('p2-fluid-gloss', 'fluidGloss', true, 1);
-      bindP2Slider('p2-irid-sheen', 'iridSheen', true, 1);
+      bindP2Slider('p2-irid-sheen', 'iridSheen', true, 2);
+      bindP2Slider('p2-visc-tension', 'viscTension', true, 1);
 
       // Binds Estilo 3
       const bindP3Slider = (id, prop, isFloat = true, stepFixed = 2) => {
@@ -2163,7 +2259,7 @@
       };
 
       bindP3Slider('p3-segments', 'segments', false);
-      bindP3Slider('p3-rot-speed', 'rotSpeed', true, 1);
+      bindP3Slider('p3-rot-speed', 'rotSpeed', true, 2);
       bindP3Slider('p3-density', 'density', true, 1);
       bindP3Slider('p3-zoom', 'zoom', true, 2);
       bindP3Slider('p3-twist', 'twist', true, 1);
