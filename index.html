@@ -3,137 +3,93 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>AudioView BorealisBasin</title>
+  <title>AudioView - Multi-Surface Pro</title>
   <style>
     :root {
-      --bg: #09090d;
-      --panel: rgba(18, 18, 24, 0.96);
-      --border: rgba(255, 255, 255, 0.12);
-      --accent: #e5ba00;
-      --accent-cyan: #00f5d4;
-      --accent-red: #ff4d4d;
-      --text: #f0f0f8;
-      --text-muted: #88889c;
-      --font-mono: 'SF Mono', Consolas, Monaco, monospace;
+      --bg: #09090d; --panel: rgba(18, 18, 24, 0.96); --border: rgba(255, 255, 255, 0.12);
+      --accent: #e5ba00; --accent-cyan: #00f5d4; --accent-red: #ff4d4d; --text: #f0f0f8;
+      --text-muted: #88889c; --input-bg: #14141c; --font-mono: 'SF Mono', Consolas, Monaco, monospace;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
     body, html { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: var(--text); }
-    #projection-stage { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; overflow: hidden; background: #000; touch-action: none; cursor: grab; }
-    #projection-stage:active { cursor: grabbing; }
-    #warp-wrapper { position: absolute; top: 0; left: 0; transform-origin: 0 0; pointer-events: none; }
-    canvas#glCanvas { width: 100%; height: 100%; display: block; }
+    #projection-stage { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; overflow: hidden; background: #000; touch-action: none; }
+
+    .warp-wrapper { position: absolute; top: 0; left: 0; width: 1280px; height: 720px; transform-origin: 0 0; pointer-events: auto; cursor: grab; }
+    .warp-wrapper:active { cursor: grabbing; }
+    .warp-wrapper.active-surface { outline: 2px dashed rgba(0, 245, 212, 0.7); box-shadow: 0 0 24px rgba(0, 245, 212, 0.25); }
+
+    .surface-canvas, .surface-media { width: 100%; height: 100%; display: block; object-fit: cover; pointer-events: none; }
+    .surface-yt-box { width: 100%; height: 100%; pointer-events: none; overflow: hidden; }
+    .surface-yt-box.interactive { pointer-events: auto; }
+    .surface-yt-box iframe { width: 100%; height: 100%; border: none; }
+
+    .quad-grid-overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none;
+      background-size: 80px 80px, 80px 80px, 16px 16px, 16px 16px;
+      background-image: linear-gradient(to right, rgba(0,245,212,0.8) 2px, transparent 2px), linear-gradient(to bottom, rgba(0,245,212,0.8) 2px, transparent 2px),
+                        linear-gradient(to right, rgba(229,186,0,0.3) 1px, transparent 1px), linear-gradient(to bottom, rgba(229,186,0,0.3) 1px, transparent 1px);
+      border: 4px solid var(--accent-cyan); align-items: center; justify-content: center;
+    }
+    .quad-grid-overlay.visible { display: flex; }
+    .quad-grid-badge { background: rgba(0,0,0,0.85); border: 2px solid var(--accent-cyan); color: var(--accent-cyan); padding: 10px 20px; border-radius: 8px; font-family: var(--font-mono); font-weight: 800; font-size: 15px; }
 
     .warp-pin {
-      position: absolute; width: 36px; height: 36px; background: rgba(229, 186, 0, 0.4);
-      border: 2px solid var(--accent); border-radius: 50%; transform: translate(-50%, -50%);
-      cursor: crosshair; z-index: 1000; transition: background 0.15s, border-color 0.15s;
-      touch-action: none; pointer-events: auto;
+      position: absolute; width: 34px; height: 34px; background: rgba(229, 186, 0, 0.45); border: 2px solid var(--accent);
+      border-radius: 50%; transform: translate(-50%, -50%); cursor: crosshair; z-index: 1500; touch-action: none; display: none;
     }
-    .warp-pin::before { content: ''; position: absolute; top: -14px; left: -14px; right: -14px; bottom: -14px; }
-    .warp-pin:hover, .warp-pin.active { background: var(--accent-cyan); border-color: #fff; box-shadow: 0 0 20px var(--accent-cyan); }
-    .warp-pin::after {
-      content: attr(data-corner); position: absolute; top: -18px; left: 50%; transform: translateX(-50%);
-      font-size: 11px; font-family: var(--font-mono); font-weight: bold; color: var(--accent); pointer-events: none;
-    }
+    .warp-pin:hover, .warp-pin.active { background: var(--accent-cyan); border-color: #fff; box-shadow: 0 0 16px var(--accent-cyan); }
+    .warp-pin::after { content: attr(data-corner); position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 11px; font-family: var(--font-mono); font-weight: bold; color: var(--accent); }
 
-    #btn-hud-float {
-      position: fixed; bottom: 16px; left: 16px; z-index: 3000; background: rgba(20, 20, 28, 0.9);
-      backdrop-filter: blur(14px); border: 1px solid var(--border); color: #fff; padding: 10px 18px;
-      border-radius: 24px; font-size: 11px; font-family: var(--font-mono); font-weight: 700; cursor: pointer;
-      display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(0,0,0,0.7);
-    }
+    #btn-hud-float { position: fixed; bottom: 16px; left: 16px; z-index: 3000; background: rgba(20, 20, 28, 0.9); backdrop-filter: blur(14px); border: 1px solid var(--border); color: #fff; padding: 10px 18px; border-radius: 24px; font-size: 11px; font-family: var(--font-mono); font-weight: 700; cursor: pointer; }
     #btn-hud-float.hidden-hud { opacity: 0.45; background: rgba(10, 10, 14, 0.7); }
+    #btn-grid-save-exit { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 4000; background: #00f5d4; color: #000; border: 2px solid #fff; padding: 10px 24px; border-radius: 30px; font-size: 11px; font-family: var(--font-mono); font-weight: 900; cursor: pointer; display: none; }
 
-    #btn-grid-save-exit {
-      position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 4000;
-      background: #00f5d4; color: #000; border: 2px solid #fff; padding: 12px 26px; border-radius: 30px;
-      font-size: 12px; font-family: var(--font-mono); font-weight: 900; cursor: pointer; display: none;
-      box-shadow: 0 8px 30px rgba(0,245,212,0.6); text-transform: uppercase;
-    }
-
-    #top-bar {
-      position: absolute; top: 10px; right: 10px; left: 10px; display: flex; gap: 6px; z-index: 2000;
-      align-items: center; justify-content: space-between; transition: opacity 0.2s, transform 0.2s;
-    }
+    #top-bar { position: absolute; top: 10px; right: 10px; left: 10px; display: flex; gap: 8px; z-index: 2000; align-items: center; justify-content: space-between; transition: opacity 0.2s, transform 0.2s; }
     #top-bar.hidden { opacity: 0; pointer-events: none; transform: translateY(-12px); }
+    .top-left { display: flex; gap: 6px; align-items: center; }
+    .surf-badge { background: rgba(18, 18, 24, 0.92); border: 1px solid var(--border); color: var(--text); padding: 7px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; }
+    .surf-badge select { background: transparent; border: none; color: var(--accent); font-weight: bold; outline: none; cursor: pointer; }
 
-    .style-selector-group { display: flex; gap: 4px; background: rgba(18, 18, 24, 0.9); padding: 4px; border-radius: 8px; border: 1px solid var(--border); }
-    .btn-style-pill {
-      background: transparent; border: none; color: var(--text-muted); padding: 8px 12px;
-      border-radius: 6px; font-size: 10.5px; font-weight: 700; cursor: pointer; white-space: nowrap;
-    }
-    .btn-style-pill.active { background: var(--accent); color: #000; box-shadow: 0 0 10px rgba(229, 186, 0, 0.4); }
+    .style-group { display: flex; gap: 4px; background: rgba(18, 18, 24, 0.9); padding: 4px; border-radius: 8px; border: 1px solid var(--border); }
+    .btn-pill { background: transparent; border: none; color: var(--text-muted); padding: 8px 12px; border-radius: 6px; font-size: 10.5px; font-weight: 700; cursor: pointer; }
+    .btn-pill.active { background: var(--accent); color: #000; }
+    .btn-top { background: rgba(20, 20, 26, 0.92); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 11px; font-weight: 700; }
+    .btn-top.active { border-color: var(--accent); color: var(--accent); }
+    .btn-mic { background: rgba(255, 77, 77, 0.15); border: 1px solid var(--accent-red); color: #ff9999; padding: 8px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; }
+    .btn-mic.active { background: rgba(0, 245, 212, 0.15); border-color: var(--accent-cyan); color: var(--accent-cyan); }
 
-    .top-actions { display: flex; gap: 6px; }
-    .btn-action-top {
-      background: rgba(20, 20, 26, 0.92); border: 1px solid var(--border); color: var(--text);
-      padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 11px; font-weight: 700;
-    }
-    .btn-action-top.active { border-color: var(--accent); color: var(--accent); }
-
-    .btn-mic-toggle {
-      background: rgba(255, 77, 77, 0.15); border: 1px solid var(--accent-red); color: #ff9999;
-      padding: 8px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer;
-    }
-    .btn-mic-toggle.active { background: rgba(0, 245, 212, 0.15); border-color: var(--accent-cyan); color: var(--accent-cyan); }
-
-    #sidebar-drawer {
-      position: absolute; top: 60px; right: 10px; width: 360px; max-width: calc(100vw - 20px);
-      max-height: calc(100vh - 80px); background: var(--panel); backdrop-filter: blur(20px);
-      border: 1px solid var(--border); border-radius: 12px; z-index: 2000; display: flex;
-      flex-direction: column; box-shadow: 0 16px 48px rgba(0,0,0,0.9); overflow-y: auto;
-      transition: opacity 0.25s ease, transform 0.25s ease;
-    }
+    #sidebar-drawer { position: absolute; top: 60px; right: 10px; width: 360px; max-width: calc(100vw - 20px); max-height: calc(100vh - 80px); background: var(--panel); backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: 12px; z-index: 2000; display: flex; flex-direction: column; overflow-y: auto; transition: opacity 0.25s, transform 0.25s; }
     #sidebar-drawer.collapsed { opacity: 0; pointer-events: none; transform: translateY(16px); }
 
-    .btn-grid-calibrate {
-      width: 100%; padding: 13px; border: 1px solid var(--accent-cyan); background: rgba(0, 245, 212, 0.12);
-      color: var(--accent-cyan); border-radius: 8px; font-size: 11.5px; font-weight: 800;
-      text-transform: uppercase; cursor: pointer; display: flex; align-items: center; justify-content: center;
-    }
-    .btn-cloud { width: 100%; padding: 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; text-transform: uppercase; }
-    .btn-cloud-save { background: rgba(0, 245, 212, 0.15); border: 1px solid var(--accent-cyan); color: var(--accent-cyan); }
-    .btn-cloud-load { background: rgba(229, 186, 0, 0.15); border: 1px solid var(--accent); color: var(--accent); }
-    .btn-cloud-file { background: #1c1c24; border: 1px solid var(--border); color: #ddd; }
-    #cloud-status { font-size: 10.5px; font-family: var(--font-mono); color: var(--accent-cyan); text-align: center; min-height: 14px; margin-top: 4px; }
-
     details { border-bottom: 1px solid var(--border); }
-    summary {
-      padding: 12px 14px; font-size: 11px; font-weight: 700; color: #b8b8cc; cursor: pointer;
-      list-style: none; display: flex; justify-content: space-between; align-items: center;
-      background: rgba(255,255,255,0.02); text-transform: uppercase;
-    }
-    summary::-webkit-details-marker { display: none; }
-    summary:after { content: "+"; font-size: 14px; color: var(--text-muted); font-family: var(--font-mono); }
-    details[open] summary:after { content: ""; }
-    details[open] summary { color: #fff; background: rgba(255,255,255,0.04); }
-    .section-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 12px; }
-
+    summary { padding: 12px 14px; font-size: 11px; font-weight: 700; color: #b8b8cc; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); text-transform: uppercase; }
+    summary::after { content: "+"; font-size: 14px; color: var(--text-muted); font-family: var(--font-mono); }
+    details[open] summary::after { content: ""; }
+    .section-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
     .ctrl-row { display: flex; justify-content: space-between; align-items: center; font-size: 11px; }
     .ctrl-row label { color: var(--text-muted); font-family: var(--font-mono); font-weight: 600; }
     .ctrl-row .ctrl-val { min-width: 44px; text-align: right; color: var(--accent); font-family: var(--font-mono); font-size: 11px; font-weight: 700; }
 
-    input[type="range"] { -webkit-appearance: none; width: 48%; height: 10px; background: #262634; border-radius: 5px; outline: none; }
-    input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: #eee; cursor: pointer; }
-    input[type="color"] { -webkit-appearance: none; border: none; width: 34px; height: 26px; border-radius: 4px; cursor: pointer; background: transparent; }
-    input[type="text"], select { width: 100%; background: var(--input-bg); border: 1px solid var(--border); color: #fff; padding: 8px 10px; border-radius: 6px; font-size: 11px; outline: none; }
-    .check-row { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 11px; color: var(--text-muted); font-weight: 600; }
-    .check-row input { accent-color: var(--accent); width: 18px; height: 18px; }
-    #spectrum-canvas { width: 100%; height: 46px; background: #0c0c0f; border-radius: 6px; border: 1px solid var(--border); margin-top: 4px; }
-
-    #permission-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 5000; display: none; align-items: center; justify-content: center; padding: 16px; }
+    input[type="range"] { -webkit-appearance: none; width: 48%; height: 8px; background: #262634; border-radius: 4px; outline: none; }
+    input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #eee; cursor: pointer; }
+    input[type="color"] { -webkit-appearance: none; border: none; width: 32px; height: 24px; border-radius: 4px; cursor: pointer; background: transparent; }
+    input[type="text"], select { width: 100%; background: var(--input-bg); border: 1px solid var(--border); color: #fff; padding: 7px 9px; border-radius: 6px; font-size: 11px; outline: none; }
+    .btn-sub { width: 100%; padding: 9px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; text-transform: uppercase; border: 1px solid var(--border); background: #1c1c24; color: #eee; }
+    .btn-sub-cyan { background: rgba(0, 245, 212, 0.15); border-color: var(--accent-cyan); color: var(--accent-cyan); }
+    .btn-sub-gold { background: rgba(229, 186, 0, 0.15); border-color: var(--accent); color: var(--accent); }
+    .btn-sub-red { background: rgba(255, 77, 77, 0.15); border-color: var(--accent-red); color: #ff9999; }
+    .check-row { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px; color: var(--text-muted); font-weight: 600; }
+    .check-row input { accent-color: var(--accent); width: 16px; height: 16px; }
+    #spectrum-canvas { width: 100%; height: 42px; background: #0c0c0f; border-radius: 6px; border: 1px solid var(--border); }
+    #permission-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 5000; display: none; align-items: center; justify-content: center; padding: 16px; }
     #permission-modal.active { display: flex; }
-    .modal-card { background: #14141c; border: 1px solid var(--accent); border-radius: 12px; padding: 20px; max-width: 380px; width: 100%; color: #eee; font-size: 12px; line-height: 1.5; }
-    .modal-card h3 { color: var(--accent); margin-bottom: 8px; font-size: 14px; }
-    .modal-card button { width: 100%; padding: 10px; background: var(--accent); border: none; border-radius: 6px; color: #000; font-weight: bold; margin-top: 12px; cursor: pointer; }
+    .modal-card { background: #14141c; border: 1px solid var(--accent); border-radius: 12px; padding: 20px; max-width: 360px; width: 100%; color: #eee; font-size: 12px; }
   </style>
 </head>
 <body>
 
   <div id="projection-stage">
-    <div id="warp-wrapper">
-      <canvas id="glCanvas"></canvas>
-    </div>
+    <div id="surfaces-layer"></div>
     <div class="warp-pin" id="pin-0" data-corner="TL"></div>
     <div class="warp-pin" id="pin-1" data-corner="TR"></div>
     <div class="warp-pin" id="pin-2" data-corner="BR"></div>
@@ -141,146 +97,170 @@
   </div>
 
   <button id="btn-hud-float">OCULTAR HUD</button>
-  <button id="btn-grid-save-exit">SALVAR E SAIR</button>
+  <button id="btn-grid-save-exit">SALVAR E SAIR DA GRADE</button>
 
   <header id="top-bar">
-    <div class="style-selector-group">
-      <button class="btn-style-pill active" id="btn-select-s1">Estilo 1 (Dot Grid)</button>
-      <button class="btn-style-pill" id="btn-select-s2">Estilo 2 (Liquid Tank)</button>
-      <button class="btn-style-pill" id="btn-select-s3">Estilo 3 (Psycho Kaleido)</button>
+    <div class="top-left">
+      <div class="surf-badge">ÁREA: <select id="top-select-surface"></select></div>
+      <div class="style-group">
+        <button class="btn-pill active" id="btn-select-s1">Dot Grid</button>
+        <button class="btn-pill" id="btn-select-s2">Liquid Tank</button>
+        <button class="btn-pill" id="btn-select-s3">Psycho Kaleido</button>
+      </div>
     </div>
-    <div class="top-actions">
-      <button id="btn-toggle-mic" class="btn-mic-toggle">MIC OFF</button>
-      <button id="btn-toggle-drawer" class="btn-action-top active">AJUSTES</button>
+    <div style="display:flex; gap:6px;">
+      <button id="btn-toggle-mic" class="btn-mic">MIC OFF</button>
+      <button id="btn-toggle-drawer" class="btn-top active">AJUSTES</button>
     </div>
   </header>
 
   <aside id="sidebar-drawer">
-    <div style="padding: 12px 14px 4px 14px;">
-      <button id="btn-mode-grid" class="btn-grid-calibrate"><span>MODO GRADE ALINHAMENTO</span></button>
+    <div style="padding: 10px 14px 4px 14px;">
+      <button id="btn-mode-grid" class="btn-sub btn-sub-cyan">MODO GRADE ALINHAMENTO</button>
     </div>
 
+    <!-- Multi-Superfícies (Quads) -->
     <details open>
-      <summary>Banco de Presets Firebase</summary>
+      <summary>Superfícies de Mapeamento (Multi-Quads)</summary>
       <div class="section-body">
-        <label style="font-size: 10.5px; color: var(--text-muted); font-family: var(--font-mono);">Identificador ou Email</label>
-        <input type="text" id="input-cloud-user" placeholder="ex: teste@teste ou meu_preset">
-
-        <label style="font-size: 10.5px; color: var(--text-muted); font-family: var(--font-mono);">Nome do Preset</label>
-        <input type="text" id="input-preset-name" placeholder="ex: Show_Doom_1 ou Ensaio_Fuzz">
-
-        <label style="font-size: 10.5px; color: var(--text-muted); font-family: var(--font-mono);">Presets Salvos na Conta</label>
-        <select id="select-cloud-presets"><option value="">Nenhum preset carregado</option></select>
-
         <div style="display:flex; gap:6px;">
-          <button id="btn-cloud-save" class="btn-cloud btn-cloud-save">Salvar ou Atualizar Preset</button>
-          <button id="btn-cloud-load" class="btn-cloud btn-cloud-load">Carregar Preset</button>
+          <button id="btn-add-surface" class="btn-sub btn-sub-cyan" style="flex:1;">+ Nova</button>
+          <button id="btn-clone-surface" class="btn-sub" style="flex:1;">Clonar</button>
+          <button id="btn-delete-surface" class="btn-sub btn-sub-red" style="flex:1;">Excluir</button>
         </div>
-        <div id="cloud-status">Pronto para sincronizar</div>
+        <div class="ctrl-row"><label>Área Ativa</label><select id="select-active-surface" style="max-width:55%;"></select></div>
+        <div class="ctrl-row"><label>Nome</label><input type="text" id="input-surface-name" style="max-width:55%;"></div>
+        <div class="ctrl-row"><label>Fonte</label>
+          <select id="select-surface-source" style="max-width:55%;">
+            <option value="shader-0">Shader: Dot Grid</option>
+            <option value="shader-1">Shader: Liquid Tank</option>
+            <option value="shader-2">Shader: Psycho Kaleido</option>
+            <option value="video">Vídeo Local (MP4/WebM)</option>
+            <option value="image">Imagem Local</option>
+            <option value="youtube">Player YouTube</option>
+          </select>
+        </div>
+        <div id="box-source-media" style="display:none; flex-direction:column; gap:6px; background: rgba(0,0,0,0.3); padding:8px; border-radius:6px; border:1px solid var(--border);">
+          <button id="btn-trigger-media-file" class="btn-sub">Escolher Arquivo do Disco</button>
+          <input type="file" id="input-media-file" style="display: none;">
+          <input type="text" id="input-media-url" placeholder="Ou URL direta do vídeo/imagem">
+          <div style="display:flex; justify-content:space-between;">
+            <label class="check-row"><input type="checkbox" id="check-media-muted" checked><span>Mudo</span></label>
+            <label class="check-row"><input type="checkbox" id="check-media-loop" checked><span>Loop</span></label>
+          </div>
+        </div>
+        <div id="box-source-youtube" style="display:none; flex-direction:column; gap:6px; background: rgba(0,0,0,0.3); padding:8px; border-radius:6px; border:1px solid var(--border);">
+          <input type="text" id="input-youtube-id" placeholder="Link do YouTube ou ID (ex: dQw4w9WgXcQ)">
+          <button id="btn-apply-youtube" class="btn-sub btn-sub-gold">Carregar YouTube no Quad</button>
+          <label class="check-row"><input type="checkbox" id="check-youtube-interactive"><span>Permitir cliques no Player</span></label>
+        </div>
+        <div class="ctrl-row"><label>Opacidade</label><input type="range" id="p-surface-opacity" min="0.05" max="1" step="0.05" value="1"><span class="ctrl-val" id="v-surface-opacity">1.00</span></div>
+        <div style="display:flex; gap:6px;">
+          <button id="btn-surface-center" class="btn-sub" style="flex:1;">Centralizar</button>
+          <button id="btn-surface-reset-pins" class="btn-sub" style="flex:1;">Resetar Pinos</button>
+        </div>
       </div>
     </details>
 
+    <!-- Presets Firebase -->
     <details>
-      <summary>Backup em Arquivo JSON</summary>
+      <summary>Banco Presets Firebase</summary>
       <div class="section-body">
-        <button id="btn-export-json" class="btn-cloud btn-cloud-file">Exportar Configuracoes JSON</button>
-        <button id="btn-trigger-import-json" class="btn-cloud btn-cloud-file">Importar Configuracoes JSON</button>
+        <input type="text" id="input-cloud-user" placeholder="Identificador / Email">
+        <input type="text" id="input-preset-name" placeholder="Nome do Preset">
+        <select id="select-cloud-presets"><option value="">Nenhum preset carregado</option></select>
+        <div style="display:flex; gap:6px;">
+          <button id="btn-cloud-save" class="btn-sub btn-sub-cyan" style="flex:1;">Salvar</button>
+          <button id="btn-cloud-load" class="btn-sub btn-sub-gold" style="flex:1;">Carregar</button>
+        </div>
+        <div id="cloud-status" style="font-size:10px; font-family:var(--font-mono); color:var(--accent-cyan); text-align:center;">Pronto</div>
+      </div>
+    </details>
+
+    <!-- Backup JSON -->
+    <details>
+      <summary>Backup Arquivo JSON</summary>
+      <div class="section-body">
+        <button id="btn-export-json" class="btn-sub">Exportar Mapeamento JSON</button>
+        <button id="btn-trigger-import-json" class="btn-sub">Importar Mapeamento JSON</button>
         <input type="file" id="input-import-json" accept=".json" style="display: none;">
       </div>
     </details>
 
+    <!-- Áudio Global -->
     <details open>
-      <summary>Processamento de Audio (<span id="label-audio-style">Estilo 1</span>)</summary>
+      <summary>Processamento de Áudio</summary>
       <div class="section-body">
-        <div class="ctrl-row"><label>Dispositivo</label><select id="select-audio-input" style="max-width: 50%;"></select></div>
-        <div class="ctrl-row"><label>Sensibilidade</label><input type="range" id="p-audio-sens" min="0.5" max="10.0" step="0.5" value="5.0"><span class="ctrl-val" id="v-audio-sens">5.0</span></div>
-        <div class="ctrl-row"><label>Ganho</label><input type="range" id="p-audio-gain" min="0.1" max="4.0" step="0.1" value="1.3"><span class="ctrl-val" id="v-audio-gain">1.3</span></div>
-        <div class="ctrl-row"><label>Noise Gate</label><input type="range" id="p-noise-gate" min="0.00" max="0.30" step="0.01" value="0.04"><span class="ctrl-val" id="v-noise-gate">0.04</span></div>
-        <div class="ctrl-row"><label>Suavizacao</label><input type="range" id="p-audio-smooth" min="0.1" max="0.95" step="0.05" value="0.75"><span class="ctrl-val" id="v-audio-smooth">0.75</span></div>
-        <div class="ctrl-row"><label>Atenuacao Grave</label><input type="range" id="p-bass-att" min="0.1" max="2.0" step="0.05" value="0.80"><span class="ctrl-val" id="v-bass-att">0.80</span></div>
-        <canvas id="spectrum-canvas" width="310" height="46"></canvas>
+        <div class="ctrl-row"><label>Dispositivo</label><select id="select-audio-input" style="max-width:55%;"></select></div>
+        <div class="ctrl-row"><label>Sensibilidade</label><input type="range" id="p-audio-sens" min="0.5" max="10" step="0.5" value="5"><span class="ctrl-val" id="v-audio-sens">5.0</span></div>
+        <div class="ctrl-row"><label>Ganho</label><input type="range" id="p-audio-gain" min="0.1" max="4" step="0.1" value="1.3"><span class="ctrl-val" id="v-audio-gain">1.3</span></div>
+        <div class="ctrl-row"><label>Noise Gate</label><input type="range" id="p-noise-gate" min="0.0" max="0.3" step="0.01" value="0.04"><span class="ctrl-val" id="v-noise-gate">0.04</span></div>
+        <div class="ctrl-row"><label>Suavização</label><input type="range" id="p-audio-smooth" min="0.1" max="0.95" step="0.05" value="0.75"><span class="ctrl-val" id="v-audio-smooth">0.75</span></div>
+        <div class="ctrl-row"><label>Atenuação Grave</label><input type="range" id="p-bass-att" min="0.1" max="2" step="0.05" value="0.8"><span class="ctrl-val" id="v-bass-att">0.80</span></div>
+        <canvas id="spectrum-canvas" width="310" height="42"></canvas>
       </div>
     </details>
 
+    <!-- Shaders da Área Ativa -->
     <div id="container-style-1">
       <details open>
-        <summary>Controles Dot Grid</summary>
+        <summary>Dot Grid (Área Ativa)</summary>
         <div class="section-body">
-          <div class="ctrl-row"><label>Cor dos Pontos</label><input type="color" id="p1-dot-color" value="#e5ba00"></div>
-          <div class="ctrl-row"><label>Tamanho Ponto</label><input type="range" id="p1-dot-size" min="0.005" max="0.1" step="0.005" value="0.01"><span class="ctrl-val" id="v1-dot-size">0.010</span></div>
-          <div class="ctrl-row"><label>Espacamento</label><input type="range" id="p1-spacing" min="0.1" max="1.5" step="0.05" value="0.4"><span class="ctrl-val" id="v1-spacing">0.40</span></div>
-          <div class="ctrl-row"><label>Escala Maxima</label><input type="range" id="p1-max-scale" min="1.0" max="8.0" step="0.2" value="3.0"><span class="ctrl-val" id="v1-max-scale">3.0</span></div>
-          <div class="ctrl-row"><label>Modulacao Onda</label><input type="range" id="p1-wave-mod" min="0.0" max="6.0" step="0.2" value="2.0"><span class="ctrl-val" id="v1-wave-mod">2.0</span></div>
-          <div class="ctrl-row"><label>Reatividade Cor</label><input type="range" id="p1-color-react" min="0.0" max="2.0" step="0.1" value="1.0"><span class="ctrl-val" id="v1-color-react">1.00</span></div>
-        </div>
-      </details>
-      <details open>
-        <summary>Caleidoscopio e Distorcao</summary>
-        <div class="section-body">
-          <label class="check-row"><input type="checkbox" id="p1-kaleido-enable" checked><span>ATIVAR CALEIDOSCOPIO</span></label>
+          <div class="ctrl-row"><label>Cor</label><input type="color" id="p1-dot-color" value="#e5ba00"></div>
+          <div class="ctrl-row"><label>Tamanho</label><input type="range" id="p1-dot-size" min="0.005" max="0.1" step="0.005" value="0.01"><span class="ctrl-val" id="v1-dot-size">0.010</span></div>
+          <div class="ctrl-row"><label>Espaçamento</label><input type="range" id="p1-spacing" min="0.1" max="1.5" step="0.05" value="0.4"><span class="ctrl-val" id="v1-spacing">0.40</span></div>
+          <div class="ctrl-row"><label>Escala Máx</label><input type="range" id="p1-max-scale" min="1" max="8" step="0.2" value="3"><span class="ctrl-val" id="v1-max-scale">3.0</span></div>
+          <div class="ctrl-row"><label>Modulação Onda</label><input type="range" id="p1-wave-mod" min="0" max="6" step="0.2" value="2"><span class="ctrl-val" id="v1-wave-mod">2.0</span></div>
+          <div class="ctrl-row"><label>Reatividade</label><input type="range" id="p1-color-react" min="0" max="2" step="0.1" value="1"><span class="ctrl-val" id="v1-color-react">1.00</span></div>
+          <label class="check-row"><input type="checkbox" id="p1-kaleido-enable" checked><span>Caleidoscópio</span></label>
           <div class="ctrl-row"><label>Segmentos</label><input type="range" id="p1-segments" min="2" max="24" step="1" value="8"><span class="ctrl-val" id="v1-segments">8</span></div>
-          <div class="ctrl-row"><label>Torcao</label><input type="range" id="p1-twist" min="-1.5" max="1.5" step="0.05" value="0.0"><span class="ctrl-val" id="v1-twist">0.00</span></div>
-          <div class="ctrl-row"><label>Zoom</label><input type="range" id="p1-zoom" min="0.2" max="3.0" step="0.05" value="1.0"><span class="ctrl-val" id="v1-zoom">1.00</span></div>
-          <label class="check-row"><input type="checkbox" id="p1-concentric-enable" checked><span>ANEIS CONCENTRICOS</span></label>
-          <div class="ctrl-row"><label>Escala Aneis</label><input type="range" id="p1-ring-scale" min="0.5" max="6.0" step="0.1" value="2.96"><span class="ctrl-val" id="v1-ring-scale">2.96</span></div>
+          <div class="ctrl-row"><label>Torção</label><input type="range" id="p1-twist" min="-1.5" max="1.5" step="0.05" value="0"><span class="ctrl-val" id="v1-twist">0.00</span></div>
+          <div class="ctrl-row"><label>Zoom</label><input type="range" id="p1-zoom" min="0.2" max="3" step="0.05" value="1"><span class="ctrl-val" id="v1-zoom">1.00</span></div>
+          <label class="check-row"><input type="checkbox" id="p1-concentric-enable" checked><span>Anéis Concêntricos</span></label>
+          <div class="ctrl-row"><label>Escala Anéis</label><input type="range" id="p1-ring-scale" min="0.5" max="6" step="0.1" value="2.96"><span class="ctrl-val" id="v1-ring-scale">2.96</span></div>
         </div>
       </details>
     </div>
 
     <div id="container-style-2" style="display:none;">
       <details open>
-        <summary>Gradient Map Cores</summary>
+        <summary>Liquid Tank (Área Ativa)</summary>
         <div class="section-body">
-          <div class="ctrl-row"><label>Fundo Shadows</label><input type="color" id="p2-col-shadow" value="#36024c"></div>
-          <div class="ctrl-row"><label>Corpo Oleo Midtones</label><input type="color" id="p2-col-mid" value="#bc523a"></div>
-          <div class="ctrl-row"><label>Luz Highlights</label><input type="color" id="p2-col-high" value="#00d4ff"></div>
-          <div class="ctrl-row"><label>Cristas Color 4</label><input type="color" id="p2-col-c4" value="#ff2200"></div>
-          <div class="ctrl-row"><label>Preenchimento Fundo</label><input type="range" id="p2-bg-fill" min="0.0" max="1.0" step="0.05" value="0.80"><span class="ctrl-val" id="v2-bg-fill">0.80</span></div>
-          <div class="ctrl-row"><label>Gradient Shift</label><input type="range" id="p2-grad-shift" min="-1.0" max="1.0" step="0.05" value="0.0"><span class="ctrl-val" id="v2-grad-shift">0.00</span></div>
-        </div>
-      </details>
-      <details open>
-        <summary>Dinamica do Fluido</summary>
-        <div class="section-body">
-          <div class="ctrl-row"><label>Agitacao Sonora</label><input type="range" id="p2-motion-rate" min="0.2" max="4.0" step="0.1" value="1.5"><span class="ctrl-val" id="v2-motion-rate">1.5</span></div>
-          <div class="ctrl-row"><label>Fluxo Ocioso Inercia</label><input type="range" id="p2-idle-speed" min="0.00" max="0.40" step="0.01" value="0.08"><span class="ctrl-val" id="v2-idle-speed">0.08</span></div>
-          <div class="ctrl-row"><label>Espacamento Fendas</label><input type="range" id="p2-gap-size" min="0.2" max="2.5" step="0.1" value="0.7"><span class="ctrl-val" id="v2-gap-size">0.7</span></div>
-          <div class="ctrl-row"><label>Densidade Celulas</label><input type="range" id="p2-cell-scale" min="2.0" max="14.0" step="0.5" value="6.5"><span class="ctrl-val" id="v2-cell-scale">6.5</span></div>
-          <div class="ctrl-row"><label>Splash Grave</label><input type="range" id="p2-splash-force" min="0.5" max="5.0" step="0.1" value="2.0"><span class="ctrl-val" id="v2-splash-force">2.0</span></div>
-          <div class="ctrl-row"><label>Brilho Especular</label><input type="range" id="p2-fluid-gloss" min="0.2" max="3.0" step="0.1" value="1.4"><span class="ctrl-val" id="v2-fluid-gloss">1.4</span></div>
-          <div class="ctrl-row"><label>Filme Oleoso</label><input type="range" id="p2-irid-sheen" min="0.0" max="1.5" step="0.05" value="0.45"><span class="ctrl-val" id="v2-irid-sheen">0.45</span></div>
-          <div class="ctrl-row"><label>Viscosidade Dobras</label><input type="range" id="p2-visc-tension" min="0.5" max="4.0" step="0.1" value="1.8"><span class="ctrl-val" id="v2-visc-tension">1.8</span></div>
+          <div class="ctrl-row"><label>Shadows</label><input type="color" id="p2-col-shadow" value="#36024c"></div>
+          <div class="ctrl-row"><label>Midtones</label><input type="color" id="p2-col-mid" value="#bc523a"></div>
+          <div class="ctrl-row"><label>Highlights</label><input type="color" id="p2-col-high" value="#00d4ff"></div>
+          <div class="ctrl-row"><label>Color 4</label><input type="color" id="p2-col-c4" value="#ff2200"></div>
+          <div class="ctrl-row"><label>Preenchimento</label><input type="range" id="p2-bg-fill" min="0" max="1" step="0.05" value="0.8"><span class="ctrl-val" id="v2-bg-fill">0.80</span></div>
+          <div class="ctrl-row"><label>Grad Shift</label><input type="range" id="p2-grad-shift" min="-1" max="1" step="0.05" value="0"><span class="ctrl-val" id="v2-grad-shift">0.00</span></div>
+          <div class="ctrl-row"><label>Agitação Som</label><input type="range" id="p2-motion-rate" min="0.2" max="4" step="0.1" value="1.5"><span class="ctrl-val" id="v2-motion-rate">1.5</span></div>
+          <div class="ctrl-row"><label>Fluxo Ocioso</label><input type="range" id="p2-idle-speed" min="0" max="0.4" step="0.01" value="0.08"><span class="ctrl-val" id="v2-idle-speed">0.08</span></div>
+          <div class="ctrl-row"><label>Fendas</label><input type="range" id="p2-gap-size" min="0.2" max="2.5" step="0.1" value="0.7"><span class="ctrl-val" id="v2-gap-size">0.7</span></div>
+          <div class="ctrl-row"><label>Células</label><input type="range" id="p2-cell-scale" min="2" max="14" step="0.5" value="6.5"><span class="ctrl-val" id="v2-cell-scale">6.5</span></div>
+          <div class="ctrl-row"><label>Splash Grave</label><input type="range" id="p2-splash-force" min="0.5" max="5" step="0.1" value="2"><span class="ctrl-val" id="v2-splash-force">2.0</span></div>
+          <div class="ctrl-row"><label>Gloss</label><input type="range" id="p2-fluid-gloss" min="0.2" max="3" step="0.1" value="1.4"><span class="ctrl-val" id="v2-fluid-gloss">1.4</span></div>
+          <div class="ctrl-row"><label>Filme Oleoso</label><input type="range" id="p2-irid-sheen" min="0" max="1.5" step="0.05" value="0.45"><span class="ctrl-val" id="v2-irid-sheen">0.45</span></div>
+          <div class="ctrl-row"><label>Viscosidade</label><input type="range" id="p2-visc-tension" min="0.5" max="4" step="0.1" value="1.8"><span class="ctrl-val" id="v2-visc-tension">1.8</span></div>
         </div>
       </details>
     </div>
 
     <div id="container-style-3" style="display:none;">
       <details open>
-        <summary>Optica e Relevo 3D</summary>
+        <summary>Psycho Kaleido (Área Ativa)</summary>
         <div class="section-body">
-          <div class="ctrl-row"><label>Relevo Optico</label><input type="range" id="p3-bump" min="0.2" max="5.0" step="0.1" value="2.0"><span class="ctrl-val" id="v3-bump">2.0</span></div>
-          <div class="ctrl-row"><label>Brilho Especular</label><input type="range" id="p3-gloss" min="0.2" max="4.0" step="0.1" value="1.8"><span class="ctrl-val" id="v3-gloss">1.8</span></div>
-          <div class="ctrl-row"><label>Profundidade Sombra</label><input type="range" id="p3-shadow" min="0.0" max="1.0" step="0.05" value="0.70"><span class="ctrl-val" id="v3-shadow">0.70</span></div>
-          <div class="ctrl-row"><label>Desvio Optico</label><input type="range" id="p3-chroma" min="0.0" max="2.0" step="0.05" value="0.60"><span class="ctrl-val" id="v3-chroma">0.60</span></div>
-        </div>
-      </details>
-      <details open>
-        <summary>Geometria Psycho Kaleido</summary>
-        <div class="section-body">
-          <div class="ctrl-row"><label>Segmentos Petalas</label><input type="range" id="p3-segments" min="4" max="14" step="1" value="8"><span class="ctrl-val" id="v3-segments">8</span></div>
-          <div class="ctrl-row"><label>Rotacao Organica</label><input type="range" id="p3-rot-speed" min="-2.0" max="2.0" step="0.1" value="0.35"><span class="ctrl-val" id="v3-rot-speed">0.35</span></div>
-          <div class="ctrl-row"><label>Densidade Fractal</label><input type="range" id="p3-density" min="0.5" max="5.0" step="0.1" value="2.2"><span class="ctrl-val" id="v3-density">2.2</span></div>
-          <div class="ctrl-row"><label>Zoom Expansivo</label><input type="range" id="p3-zoom" min="0.2" max="3.0" step="0.05" value="1.0"><span class="ctrl-val" id="v3-zoom">1.00</span></div>
-          <div class="ctrl-row"><label>Torcao Vortex</label><input type="range" id="p3-twist" min="-3.0" max="3.0" step="0.1" value="0.5"><span class="ctrl-val" id="v3-twist">0.5</span></div>
-          <div class="ctrl-row"><label>Contraste Poster</label><input type="range" id="p3-contrast" min="0.5" max="3.0" step="0.1" value="1.4"><span class="ctrl-val" id="v3-contrast">1.4</span></div>
-        </div>
-      </details>
-      <details open>
-        <summary>Paleta Psicodelica Saturada</summary>
-        <div class="section-body">
-          <div class="ctrl-row"><label>Cor Profunda Base</label><input type="color" id="p3-col1" value="#220044"></div>
-          <div class="ctrl-row"><label>Cor Vibrante Meio</label><input type="color" id="p3-col2" value="#ff3a00"></div>
-          <div class="ctrl-row"><label>Cor Arestas Luz</label><input type="color" id="p3-col3" value="#00f5d4"></div>
+          <div class="ctrl-row"><label>Bump 3D</label><input type="range" id="p3-bump" min="0.2" max="5" step="0.1" value="2"><span class="ctrl-val" id="v3-bump">2.0</span></div>
+          <div class="ctrl-row"><label>Gloss</label><input type="range" id="p3-gloss" min="0.2" max="4" step="0.1" value="1.8"><span class="ctrl-val" id="v3-gloss">1.8</span></div>
+          <div class="ctrl-row"><label>Sombra</label><input type="range" id="p3-shadow" min="0" max="1" step="0.05" value="0.7"><span class="ctrl-val" id="v3-shadow">0.70</span></div>
+          <div class="ctrl-row"><label>Chroma</label><input type="range" id="p3-chroma" min="0" max="2" step="0.05" value="0.6"><span class="ctrl-val" id="v3-chroma">0.60</span></div>
+          <div class="ctrl-row"><label>Pétalas</label><input type="range" id="p3-segments" min="4" max="14" step="1" value="8"><span class="ctrl-val" id="v3-segments">8</span></div>
+          <div class="ctrl-row"><label>Rotação</label><input type="range" id="p3-rot-speed" min="-2" max="2" step="0.1" value="0.35"><span class="ctrl-val" id="v3-rot-speed">0.35</span></div>
+          <div class="ctrl-row"><label>Densidade</label><input type="range" id="p3-density" min="0.5" max="5" step="0.1" value="2.2"><span class="ctrl-val" id="v3-density">2.2</span></div>
+          <div class="ctrl-row"><label>Zoom</label><input type="range" id="p3-zoom" min="0.2" max="3" step="0.05" value="1"><span class="ctrl-val" id="v3-zoom">1.00</span></div>
+          <div class="ctrl-row"><label>Torção</label><input type="range" id="p3-twist" min="-3" max="3" step="0.1" value="0.5"><span class="ctrl-val" id="v3-twist">0.5</span></div>
+          <div class="ctrl-row"><label>Contraste</label><input type="range" id="p3-contrast" min="0.5" max="3" step="0.1" value="1.4"><span class="ctrl-val" id="v3-contrast">1.4</span></div>
+          <div class="ctrl-row"><label>Cor Base</label><input type="color" id="p3-col1" value="#220044"></div>
+          <div class="ctrl-row"><label>Cor Meio</label><input type="color" id="p3-col2" value="#ff3a00"></div>
+          <div class="ctrl-row"><label>Cor Aresta</label><input type="color" id="p3-col3" value="#00f5d4"></div>
         </div>
       </details>
     </div>
@@ -288,218 +268,133 @@
     <details open>
       <summary>Mapeamento e Projetor</summary>
       <div class="section-body">
-        <div style="display:flex; gap:8px;">
-          <button id="btn-toggle-pins" style="flex:1; padding:10px; background:#1c1c24; border:1px solid var(--border); color:#fff; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer;">Pinos</button>
-          <button id="btn-fullscreen" style="flex:1; padding:10px; background:#1c1c24; border:1px solid var(--border); color:#fff; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer;">Tela Cheia</button>
+        <div style="display:flex; gap:6px;">
+          <button id="btn-toggle-pins" class="btn-sub" style="flex:1;">Pinos</button>
+          <button id="btn-fullscreen" class="btn-sub" style="flex:1;">Tela Cheia</button>
         </div>
-        <button id="btn-reset-warp" style="width:100%; padding:8px; background:transparent; border:1px solid #444; color:#aaa; border-radius:6px; font-size:11px; cursor:pointer;">Resetar Pinos da Projecao</button>
+        <button id="btn-reset-all" class="btn-sub" style="color:#aaa;">Resetar Todas as Áreas</button>
       </div>
     </details>
   </aside>
 
   <div id="permission-modal">
     <div class="modal-card">
-      <h3>Microfone Bloqueado</h3>
-      <p id="modal-msg">O navegador bloqueou o acesso ao microfone.</p>
-      <button id="btn-close-modal">ENTENDI TENTAR NOVAMENTE</button>
+      <h3 style="color:var(--accent); margin-bottom:8px;">Microfone Requerido</h3>
+      <p>Permita o microfone no navegador ou use HTTPS.</p>
+      <button id="btn-close-modal" class="btn-sub btn-sub-cyan" style="margin-top:12px;">Entendi</button>
     </div>
   </div>
 
+  <!-- Shaders Base -->
   <script id="vs-main" type="x-shader/x-vertex">
-    attribute vec2 position;
-    varying vec2 vUv;
-    void main() {
-      vUv = position * 0.5 + 0.5;
-      gl_Position = vec4(position, 0.0, 1.0);
-    }
+    attribute vec2 position; varying vec2 vUv;
+    void main() { vUv = position * 0.5 + 0.5; gl_Position = vec4(position, 0.0, 1.0); }
   </script>
 
   <script id="fs-draw" type="x-shader/x-fragment">
     precision highp float;
     varying vec2 vUv;
-    uniform vec2 u_resolution;
-    uniform float u_style, u_prevStyle, u_transProgress;
-    uniform bool u_isGridMode;
-    uniform float u_audioEnergy, u_bass, u_mid, u_treble, u_fuzzDrive, u_wavePhase, u_spinPhase, u_p3RotPhase;
-
-    uniform vec3 u_dotColor;
-    uniform float u_gridW, u_gridH, u_baseDotSize, u_spacing, u_maxScale, u_waveMod, u_heightDisp, u_colorReact, u_waterDist, u_pondRipple, u_swirl, u_barrel;
-    uniform bool u_kaleidoEnable, u_concentricEnable, u_mirrorRings;
-    uniform float u_segments, u_twist, u_zoom, u_ringScale;
-
-    uniform vec3 u_colShadow, u_colMid, u_colHigh, u_colC4;
+    uniform vec2 u_resolution; uniform float u_style; uniform bool u_isGrid;
+    uniform float u_audio, u_bass, u_mid, u_treb, u_fuzz, u_waveP, u_spinP, u_p3RotP;
+    uniform vec3 u_dotColor, u_colShadow, u_colMid, u_colHigh, u_colC4, u_p3Col1, u_p3Col2, u_p3Col3;
+    uniform float u_gridW, u_gridH, u_dotSize, u_spacing, u_maxScale, u_waveMod, u_colorReact, u_twist, u_zoom, u_ringScale;
+    uniform bool u_kaleidoEnable, u_concentricEnable; uniform float u_segments;
     uniform float u_bgFill, u_gapSize, u_cellScale, u_gradShift, u_splashForce, u_fluidGloss, u_iridSheen, u_viscTension;
-
     uniform float u_p3Segments, u_p3Density, u_p3Zoom, u_p3Twist, u_p3Contrast, u_p3Bump, u_p3Gloss, u_p3Shadow, u_p3Chroma;
-    uniform vec3 u_p3Col1, u_p3Col2, u_p3Col3;
-
     #define TAU 6.28318530718
 
-    float hash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
-    vec2 hash2(vec2 p) { return fract(sin(vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)))) * 43758.5453); }
-    float noise(vec2 p) { vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y); }
+    float hash(vec2 p){ p = fract(p*vec2(123.34, 456.21)); p += dot(p, p+45.32); return fract(p.x*p.y); }
+    vec2 hash2(vec2 p){ return fract(sin(vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)))) * 43758.5453); }
+    float noise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f); return mix(mix(hash(i), hash(i+vec2(1.0,0.0)), f.x), mix(hash(i+vec2(0.0,1.0)), hash(i+vec2(1.0,1.0)), f.x), f.y); }
+    float fbm(vec2 p){ float v = 0.0, a = 0.5; mat2 rot = mat2(0.877, 0.479, -0.479, 0.877); for(int i=0; i<3; i++){ v += a*noise(p); p = rot*p*2.02 + 10.0; a *= 0.5; } return v; }
+    vec2 voronoi(vec2 x){ vec2 n = floor(x), f = fract(x); float m1=8.0, m2=8.0; for(int j=-1; j<=1; j++) for(int i=-1; i<=1; i++){ vec2 g = vec2(float(i),float(j)), r = g + hash2(n+g) - f; float d = dot(r,r); if(d<m1){ m2=m1; m1=d; } else if(d<m2){ m2=d; } } return vec2(sqrt(m1), sqrt(m2)); }
+    vec2 liquidFlow(vec2 p, float phase, float amt){ return vec2(sin(p.y*6.0+phase+cos(p.x*5.0)), cos(p.x*6.0+phase+sin(p.y*5.0)))*(amt*0.7) + vec2(sin(p.x*10.0-phase*1.3), cos(p.y*10.0-phase*1.3))*(amt*0.3); }
 
-    float fbm(vec2 p) {
-      float v = 0.0; float a = 0.5; mat2 rot = mat2(0.877, 0.479, -0.479, 0.877);
-      for (int i = 0; i < 3; i++) { v += a * noise(p); p = rot * p * 2.02 + vec2(10.0); a *= 0.5; }
-      return v;
+    float getFluidHeightOpt(vec2 p){
+      float r = length(p); vec2 dir = normalize(p+0.0001); float splash = sin(r*3.8 - u_waveP*2.2)*(u_bass*u_splashForce*0.6);
+      vec2 q = vec2(noise(p + vec2(u_waveP*0.08*(1.0+u_fuzz*1.2))), noise(p + vec2(3.8,1.2) + vec2(u_waveP*0.08*(1.0+u_fuzz*1.2))));
+      vec2 rWarp = vec2(noise(p + u_viscTension*q + 1.7 + vec2(u_spinP*0.08)), noise(p + u_viscTension*q + 7.3 + vec2(u_spinP*0.08)));
+      return fbm(p + u_viscTension*rWarp + splash*dir*0.08);
     }
 
-    vec2 voronoi(vec2 x) {
-      vec2 n = floor(x); vec2 f = fract(x); float m1 = 8.0, m2 = 8.0;
-      for (int j = -1; j <= 1; j++) {
-        for (int i = -1; i <= 1; i++) {
-          vec2 g = vec2(float(i), float(j)); vec2 r = g + hash2(n + g) - f; float d = dot(r, r);
-          if (d < m1) { m2 = m1; m1 = d; } else if (d < m2) { m2 = d; }
-        }
-      }
-      return vec2(sqrt(m1), sqrt(m2));
+    float getKaleidoHeight(vec2 p){
+      vec2 z = p * u_p3Density; float acc = 0.0;
+      for(int i=0; i<3; i++){ z = abs(z) - vec2(0.35, 0.30); z = z * mat2(0.8, -0.6, 0.6, 0.8); acc += sin(z.x*3.2 + u_waveP*0.2*(1.0+u_fuzz*1.5)) * cos(z.y*3.2); }
+      return acc * 0.45 + sin(length(p)*10.0 - u_waveP*0.4)*0.25 + 0.5;
     }
 
-    vec2 liquidFlow(vec2 p, float phase, float amt) {
-      return vec2(sin(p.y * 6.0 + phase + cos(p.x * 5.0)), cos(p.x * 6.0 + phase + sin(p.y * 5.0))) * (amt * 0.7) +
-             vec2(sin(p.x * 10.0 - phase * 1.3), cos(p.y * 10.0 - phase * 1.3)) * (amt * 0.3);
-    }
-
-    float getFluidHeightOpt(vec2 p) {
-      float r = length(p); vec2 dir = normalize(p + 0.0001);
-      float splashWave = sin(r * 3.8 - u_wavePhase * 2.2) * (u_bass * u_splashForce * 0.6);
-      float fuzzWarp = 1.0 + u_fuzzDrive * 1.2;
-      vec2 q = vec2(noise(p + vec2(u_wavePhase * 0.08 * fuzzWarp)), noise(p + vec2(3.8, 1.2) + vec2(u_wavePhase * 0.08 * fuzzWarp)));
-      vec2 rWarp = vec2(noise(p + u_viscTension * q + vec2(1.7, 7.2) + vec2(u_spinPhase * 0.08)), noise(p + u_viscTension * q + vec2(7.3, 2.8) + vec2(u_spinPhase * 0.08)));
-      return fbm(p + u_viscTension * rWarp + splashWave * dir * 0.08);
-    }
-
-    float getKaleidoHeight(vec2 p) {
-      vec2 z = p * u_p3Density; float acc = 0.0; float fuzzAmt = 1.0 + u_fuzzDrive * 1.5;
-      for (int i = 0; i < 3; i++) {
-        z = abs(z) - vec2(0.35, 0.30); z = z * mat2(0.8, -0.6, 0.6, 0.8);
-        acc += sin(z.x * 3.2 + u_wavePhase * 0.2 * fuzzAmt) * cos(z.y * 3.2);
-      }
-      return acc * 0.45 + sin(length(p) * 10.0 - u_wavePhase * 0.4) * 0.25 + 0.5;
-    }
-
-    vec3 renderStyle1(vec2 uv) {
-      float r2 = dot(uv, uv); uv *= 1.0 + u_barrel * r2; float r = length(uv); float theta = atan(uv.y, uv.x);
-      uv /= max(0.2, 1.0 + u_bass * 0.8);
-      theta += (u_swirl + u_mid * 1.5 + u_fuzzDrive * 2.2) * exp(-r * 2.5) + u_spinPhase + r * (u_twist + u_fuzzDrive * 0.8);
+    vec3 renderStyle1(vec2 uv){
+      float r = length(uv), theta = atan(uv.y, uv.x);
+      uv /= max(0.2, 1.0 + u_bass*0.8);
+      theta += (u_mid*1.5 + u_fuzz*2.2)*exp(-r*2.5) + u_spinP + r*(u_twist + u_fuzz*0.8);
       if (u_kaleidoEnable) { float seg = TAU / max(u_segments, 2.0); theta = abs(mod(theta, seg) - seg * 0.5); }
       vec2 p = vec2(cos(theta), sin(theta)) * r / max(u_zoom, 0.1);
-      if (u_concentricEnable) { float cr = length(p); float ring = cr * u_ringScale; ring = u_mirrorRings ? abs(fract(ring) - 0.5) * 2.0 : fract(ring); p *= 0.5 + 0.5 * ring; }
-
-      float ripple = sin(length(p) * 24.0 - u_wavePhase * 3.0) * (u_pondRipple * 0.04 * (0.3 + u_treble * (1.0 + u_fuzzDrive * 1.5) * 0.7));
-      vec2 fluid = liquidFlow(p, u_wavePhase, u_waterDist * 0.08 * (0.4 + u_bass * 1.2 + u_fuzzDrive * 0.5));
-      vec2 grid = (p + fluid + normalize(p + 0.0001) * ripple) * (vec2(u_gridW, u_gridH) * (0.2 / max(u_spacing, 0.05)));
+      if (u_concentricEnable) { float ring = length(p)*u_ringScale; ring = abs(fract(ring)-0.5)*2.0; p *= 0.5 + 0.5*ring; }
+      vec2 fluid = liquidFlow(p, u_waveP, 0.03*(0.4 + u_bass*1.2 + u_fuzz*0.5));
+      vec2 grid = (p + fluid) * (vec2(u_gridW, u_gridH) * (0.2 / max(u_spacing, 0.05)));
       vec2 gv = fract(grid) - 0.5; vec2 id = floor(grid);
-
-      float wave = sin(length(id) * 0.25 - u_wavePhase) * 0.5 + 0.5;
-      float dotRadius = u_baseDotSize * (0.6 + (wave * u_waveMod * (0.3 + u_bass * u_heightDisp)) * u_maxScale * (0.2 + u_audioEnergy * 0.8));
-      float d = length(gv);
-      float dotMask = smoothstep(dotRadius, dotRadius * 0.25, d);
-      float glow = (0.025 / (d + 0.025)) * dotRadius * 2.5;
-
-      vec3 spectralGrad = mix(vec3(0.95, 0.15, 0.05), u_dotColor, smoothstep(0.0, 0.5, clamp(r * 1.6, 0.0, 1.0)));
-      spectralGrad = mix(spectralGrad, vec3(0.0, 0.95, 0.85), smoothstep(0.45, 1.0, clamp(r * 1.6, 0.0, 1.0)));
-      spectralGrad += vec3(0.2, 0.0, 0.4) * (u_fuzzDrive * wave * u_colorReact);
-
-      vec3 finalCol = spectralGrad * (dotMask + glow) * (0.35 + u_audioEnergy * 0.65);
-      return finalCol / (1.0 + finalCol * 0.35);
+      float wave = sin(length(id)*0.25 - u_waveP)*0.5 + 0.5;
+      float dotRadius = u_dotSize * (0.6 + (wave * u_waveMod * (0.3 + u_bass*3.0)) * u_maxScale * (0.2 + u_audio*0.8));
+      float d = length(gv), dotMask = smoothstep(dotRadius, dotRadius*0.25, d), glow = (0.025 / (d + 0.025))*dotRadius*2.5;
+      vec3 spec = mix(vec3(0.95, 0.15, 0.05), u_dotColor, smoothstep(0.0, 0.5, clamp(r*1.6, 0.0, 1.0)));
+      spec = mix(spec, vec3(0.0, 0.95, 0.85), smoothstep(0.45, 1.0, clamp(r*1.6, 0.0, 1.0))) + vec3(0.2,0.0,0.4)*(u_fuzz*wave*u_colorReact);
+      vec3 col = spec * (dotMask + glow) * (0.35 + u_audio*0.65);
+      return col / (1.0 + col*0.35);
     }
 
-    vec3 renderStyle2(vec2 uv) {
-      vec2 p = uv * 2.0; float eps = 0.006;
-      float hC = getFluidHeightOpt(p);
-      float hR = getFluidHeightOpt(p + vec2(eps, 0.0));
-      float hU = getFluidHeightOpt(p + vec2(0.0, eps));
-
-      vec3 normal = normalize(vec3((hC - hR) * u_fluidGloss, (hC - hU) * u_fluidGloss, eps * 1.8));
-      vec3 lightDir = normalize(vec3(0.5, 0.7, 1.1)); vec3 viewDir = vec3(0.0, 0.0, 1.0);
-      vec3 halfVec = normalize(lightDir + viewDir);
-
-      float diff = max(dot(normal, lightDir), 0.0);
-      float spec = pow(max(dot(normal, halfVec), 0.0), 24.0) * (0.3 + u_treble * 1.2 + u_fuzzDrive * 0.8);
-      float fresnel = pow(1.0 - max(dot(normal, viewDir), 0.0), 2.2);
-
-      vec3 irid = 0.5 + 0.5 * cos(TAU * (vec3(normal.x, normal.y, normal.z) * 1.2 + vec3(u_wavePhase * 0.06) + vec3(0.0, 0.33, 0.67)));
-      float mapPos = clamp(hC * 0.85 + u_gradShift, 0.0, 1.0);
-      vec3 baseCol = (mapPos < 0.333) ? mix(u_colShadow, u_colMid, mapPos / 0.333) :
-                     (mapPos < 0.666) ? mix(u_colMid, u_colHigh, (mapPos - 0.333) / 0.333) :
-                                        mix(u_colHigh, u_colC4, (mapPos - 0.666) / 0.334);
-
+    vec3 renderStyle2(vec2 uv){
+      vec2 p = uv * 2.0; float eps = 0.006, hC = getFluidHeightOpt(p);
+      vec3 normal = normalize(vec3((hC - getFluidHeightOpt(p+vec2(eps,0.0)))*u_fluidGloss, (hC - getFluidHeightOpt(p+vec2(0.0,eps)))*u_fluidGloss, eps*1.8));
+      vec3 light = normalize(vec3(0.5,0.7,1.1));
+      float diff = max(dot(normal, light), 0.0), spec = pow(max(dot(normal, normalize(light+vec3(0.0,0.0,1.0))), 0.0), 24.0)*(0.3+u_treb*1.2+u_fuzz*0.8);
+      vec3 irid = 0.5 + 0.5*cos(TAU*(normal*1.2 + vec3(u_waveP*0.06) + vec3(0.0, 0.33, 0.67)));
+      float pos = clamp(hC*0.85 + u_gradShift, 0.0, 1.0);
+      vec3 base = (pos < 0.333) ? mix(u_colShadow, u_colMid, pos/0.333) : (pos < 0.666) ? mix(u_colMid, u_colHigh, (pos-0.333)/0.333) : mix(u_colHigh, u_colC4, (pos-0.666)/0.334);
       vec2 vCell = voronoi(p * (u_cellScale * 0.6));
-      float cellBorder = smoothstep(0.04 * u_gapSize, 0.22 * u_gapSize, vCell.y - vCell.x);
-      vec3 fluidCol = baseCol * (0.50 + diff * 0.50) + irid * fresnel * (u_iridSheen + u_fuzzDrive * 0.3) * 0.35 + vec3(0.95, 0.98, 1.0) * spec * (u_fluidGloss * 0.25);
-      fluidCol = mix(u_colShadow * (0.35 + diff * 0.30), fluidCol, mix(cellBorder, 1.0, u_bgFill)) * smoothstep(1.5, 0.3, length(uv));
-      return fluidCol / (1.0 + fluidCol * 0.4);
+      float border = smoothstep(0.04*u_gapSize, 0.22*u_gapSize, vCell.y - vCell.x);
+      vec3 fluid = base*(0.50 + diff*0.50) + irid*pow(1.0-max(normal.z,0.0), 2.2)*(u_iridSheen+u_fuzz*0.3)*0.35 + vec3(spec*u_fluidGloss*0.25);
+      fluid = mix(u_colShadow*(0.35 + diff*0.30), fluid, mix(border, 1.0, u_bgFill)) * smoothstep(1.5, 0.3, length(uv));
+      return fluid / (1.0 + fluid*0.4);
     }
 
-    vec3 renderStyle3(vec2 uv) {
-      float r = length(uv); float theta = atan(uv.y, uv.x) + u_p3RotPhase + r * (u_p3Twist + u_mid * 1.2 + u_fuzzDrive * 1.6);
+    vec3 renderStyle3(vec2 uv){
+      float r = length(uv), theta = atan(uv.y, uv.x) + u_p3RotP + r*(u_p3Twist + u_mid*1.2 + u_fuzz*1.6);
       float seg = TAU / max(u_p3Segments, 2.0); theta = abs(mod(theta, seg) - seg * 0.5);
-      vec2 kp = vec2(cos(theta), sin(theta)) * r / max(u_p3Zoom, 0.1) / (1.0 + u_bass * 0.55);
-
-      float eps = 0.005; float hC = getKaleidoHeight(kp);
-      vec3 normal = normalize(vec3((hC - getKaleidoHeight(kp + vec2(eps, 0.0))) * u_p3Bump * 2.0, (hC - getKaleidoHeight(kp + vec2(0.0, eps))) * u_p3Bump * 2.0, eps * 2.0));
-      vec3 lightDir = normalize(vec3(0.5, 0.7, 1.2)); vec3 viewDir = vec3(0.0, 0.0, 1.0);
-      float diff = max(dot(normal, lightDir), 0.0);
-      float spec = pow(max(dot(normal, normalize(lightDir + viewDir)), 0.0), 28.0) * (0.3 + u_treble * 2.2 + u_fuzzDrive * 2.0) * u_p3Gloss;
-      float fresnel = pow(1.0 - max(dot(normal, viewDir), 0.0), 2.5);
-
-      float cShift = u_p3Chroma * 0.025 * (0.5 + u_treble * 1.5 + u_fuzzDrive * 1.0);
-      float tR = clamp((getKaleidoHeight(kp + normal.xy * cShift) * 0.35 + 0.5) * u_p3Contrast, 0.0, 1.0);
-      float tG = clamp((hC * 0.35 + 0.5) * u_p3Contrast, 0.0, 1.0);
-      float tB = clamp((getKaleidoHeight(kp - normal.xy * cShift) * 0.35 + 0.5) * u_p3Contrast, 0.0, 1.0);
-
-      vec3 colR = (tR < 0.5) ? mix(u_p3Col1, u_p3Col2, tR / 0.5) : mix(u_p3Col2, u_p3Col3, (tR - 0.5) / 0.5);
-      vec3 colG = (tG < 0.5) ? mix(u_p3Col1, u_p3Col2, tG / 0.5) : mix(u_p3Col2, u_p3Col3, (tG - 0.5) / 0.5);
-      vec3 colB = (tB < 0.5) ? mix(u_p3Col1, u_p3Col2, tB / 0.5) : mix(u_p3Col2, u_p3Col3, (tB - 0.5) / 0.5);
-
-      vec3 finalCol = vec3(colR.r, colG.g, colB.b) * (0.45 + diff * 0.55) * mix(1.0, clamp(hC * 1.4, 0.0, 1.0), u_p3Shadow) + vec3(1.0, 0.98, 0.92) * spec * 0.5 + u_p3Col3 * fresnel * 0.35;
-      finalCol *= smoothstep(1.5, 0.3, r);
-      return finalCol / (1.0 + finalCol * 0.3);
-    }
-
-    vec3 evaluateStyle(float s, vec2 uv) {
-      if (s < 0.5) return renderStyle1(uv);
-      if (s < 1.5) return renderStyle2(uv);
-      return renderStyle3(uv);
+      vec2 kp = vec2(cos(theta), sin(theta)) * r / max(u_p3Zoom, 0.1) / (1.0 + u_bass*0.55);
+      float eps = 0.005, hC = getKaleidoHeight(kp);
+      vec3 normal = normalize(vec3((hC - getKaleidoHeight(kp+vec2(eps,0.0)))*u_p3Bump*2.0, (hC - getKaleidoHeight(kp+vec2(0.0,eps)))*u_p3Bump*2.0, eps*2.0));
+      vec3 light = normalize(vec3(0.5,0.7,1.2)); float diff = max(dot(normal, light), 0.0);
+      float spec = pow(max(dot(normal, normalize(light+vec3(0.0,0.0,1.0))), 0.0), 28.0)*(0.3+u_treb*2.2+u_fuzz*2.0)*u_p3Gloss;
+      float cShift = u_p3Chroma*0.025*(0.5+u_treb*1.5+u_fuzz);
+      float tR = clamp((getKaleidoHeight(kp+normal.xy*cShift)*0.35+0.5)*u_p3Contrast, 0.0, 1.0);
+      float tG = clamp((hC*0.35+0.5)*u_p3Contrast, 0.0, 1.0);
+      float tB = clamp((getKaleidoHeight(kp-normal.xy*cShift)*0.35+0.5)*u_p3Contrast, 0.0, 1.0);
+      vec3 cR = (tR<0.5)? mix(u_p3Col1, u_p3Col2, tR/0.5) : mix(u_p3Col2, u_p3Col3, (tR-0.5)/0.5);
+      vec3 cG = (tG<0.5)? mix(u_p3Col1, u_p3Col2, tG/0.5) : mix(u_p3Col2, u_p3Col3, (tG-0.5)/0.5);
+      vec3 cB = (tB<0.5)? mix(u_p3Col1, u_p3Col2, tB/0.5) : mix(u_p3Col2, u_p3Col3, (tB-0.5)/0.5);
+      vec3 col = vec3(cR.r, cG.g, cB.b)*(0.45+diff*0.55)*mix(1.0, clamp(hC*1.4, 0.0, 1.0), u_p3Shadow) + vec3(spec*0.5);
+      return (col * smoothstep(1.5, 0.3, r)) / (1.0 + col*0.3);
     }
 
     void main() {
-      if (u_isGridMode) {
-        vec2 cellCount = vec2(16.0, 16.0 * (u_resolution.y / u_resolution.x));
-        vec2 f = abs(fract(vUv * cellCount) - 0.5);
-        vec2 gridLines = step(0.5 - (2.0 / u_resolution) * cellCount, f);
-        float isGrid = max(gridLines.x, gridLines.y);
-        vec2 centerDist = abs(vUv - 0.5) * u_resolution;
-        float isCross = max(step(centerDist.x, 2.0), step(centerDist.y, 2.0));
-        vec2 borderDist = min(vUv, 1.0 - vUv) * u_resolution;
-        float isBorder = step(min(borderDist.x, borderDist.y), 4.0);
-        gl_FragColor = vec4(vec3(max(isGrid * 0.85, max(isCross, isBorder))), 1.0);
-        return;
+      if (u_isGrid) {
+        vec2 cell = vec2(16.0, 16.0*(u_resolution.y/u_resolution.x)), f = abs(fract(vUv*cell)-0.5);
+        vec2 lines = step(0.5 - (2.0/u_resolution)*cell, f);
+        gl_FragColor = vec4(vec3(max(lines.x, lines.y)), 1.0); return;
       }
-
-      vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution) / min(u_resolution.x, u_resolution.y);
-      if (u_transProgress >= 1.0) {
-        gl_FragColor = vec4(evaluateStyle(u_style, uv), 1.0);
-      } else {
-        gl_FragColor = vec4(mix(evaluateStyle(u_prevStyle, uv), evaluateStyle(u_style, uv), smoothstep(0.0, 1.0, u_transProgress)), 1.0);
-      }
+      vec2 uv = (gl_FragCoord.xy - 0.5*u_resolution) / min(u_resolution.x, u_resolution.y);
+      gl_FragColor = vec4(u_style < 0.5 ? renderStyle1(uv) : (u_style < 1.5 ? renderStyle2(uv) : renderStyle3(uv)), 1.0);
     }
   </script>
 
   <script id="fs-trails" type="x-shader/x-fragment">
-    precision highp float;
-    varying vec2 vUv;
-    uniform sampler2D u_currentFrame, u_prevFrame;
-    uniform float u_persistence, u_zoomRate, u_audioEnergy;
-    uniform bool u_enableTrails;
-
+    precision highp float; varying vec2 vUv;
+    uniform sampler2D u_cur, u_prev; uniform float u_persist, u_zoom; uniform bool u_enableTrails;
     void main() {
-      vec3 current = texture2D(u_currentFrame, vUv).rgb;
-      if (!u_enableTrails) { gl_FragColor = vec4(current, 1.0); return; }
-      vec3 prev = texture2D(u_prevFrame, (vUv - 0.5) / u_zoomRate + 0.5).rgb;
-      gl_FragColor = vec4(current + prev * ((u_audioEnergy > 0.001) ? u_persistence : (u_persistence * 0.72)), 1.0);
+      vec3 cur = texture2D(u_cur, vUv).rgb;
+      if (!u_enableTrails) { gl_FragColor = vec4(cur, 1.0); return; }
+      vec3 prev = texture2D(u_prev, (vUv - 0.5)/u_zoom + 0.5).rgb;
+      gl_FragColor = vec4(cur + prev * u_persist, 1.0);
     }
   </script>
 
@@ -507,232 +402,107 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCbSh7P5oVXuFpsQvllr7TpHXjL4zLgAaY",
-      authDomain: "audioview-presets.firebaseapp.com",
-      projectId: "audioview-presets",
-      storageBucket: "audioview-presets.firebasestorage.app",
-      messagingSenderId: "927017546359",
-      appId: "1:927017546359:web:d5d0b403a065db72b74c72"
+    const fbConfig = {
+      apiKey: "AIzaSyCbSh7P5oVXuFpsQvllr7TpHXjL4zLgAaY", authDomain: "audioview-presets.firebaseapp.com",
+      projectId: "audioview-presets", storageBucket: "audioview-presets.firebasestorage.app",
+      messagingSenderId: "927017546359", appId: "1:927017546359:web:d5d0b403a065db72b74c72"
     };
-
-    let db = null;
-    try { db = getFirestore(initializeApp(firebaseConfig)); } catch (e) {}
+    let db = null; try { db = getFirestore(initializeApp(fbConfig)); } catch (e) {}
 
     class AudioEngine {
       constructor() {
-        this.ctx = null; this.analyser = null; this.gainNode = null; this.source = null; this.stream = null;
+        this.ctx = null; this.analyser = null; this.gainNode = null; this.stream = null; this.source = null;
         this.freqData = null; this.isReady = false; this.isMuted = true;
-        this.fftSize = 256; this.smoothing = 0.75; this.sens = 5.0; this.gain = 1.3; this.gate = 0.04; this.bassAtt = 0.80; this.motionRate = 1.5;
+        this.smoothing = 0.75; this.sens = 5.0; this.gain = 1.3; this.gate = 0.04; this.bassAtt = 0.80; this.motionRate = 1.5;
         this.envelope = 0.0; this.fuzzDrive = 0.0; this.energy = { bass: 0, mid: 0, treble: 0, total: 0 };
         this.wavePhase = 0.0; this.spinPhase = 0.0; this.p3RotPhase = 0.0; this.lastTime = performance.now();
       }
-
-      async init(deviceId = null) {
-        if (!window.isSecureContext && location.protocol !== 'http:' && location.protocol !== 'https:') throw new Error("SECURE_CONTEXT_REQUIRED");
+      async init(devId = null) {
         if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
         if (this.ctx.state === 'suspended') await this.ctx.resume();
-        const constraints = { audio: deviceId ? { deviceId: { exact: deviceId } } : true, video: false };
         if (this.stream) this.stream.getTracks().forEach(t => t.stop());
-        try { this.stream = await navigator.mediaDevices.getUserMedia(constraints); } catch (err) { this.stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false }); }
+        const constraints = { audio: devId ? { deviceId: { exact: devId } } : true, video: false };
+        try { this.stream = await navigator.mediaDevices.getUserMedia(constraints); } catch(e) { this.stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
         if (this.source) this.source.disconnect();
         this.source = this.ctx.createMediaStreamSource(this.stream);
         if (!this.gainNode) {
           this.gainNode = this.ctx.createGain(); this.analyser = this.ctx.createAnalyser();
-          this.analyser.fftSize = this.fftSize; this.analyser.smoothingTimeConstant = this.smoothing;
+          this.analyser.fftSize = 256; this.analyser.smoothingTimeConstant = this.smoothing;
           this.gainNode.connect(this.analyser);
         }
         this.gainNode.gain.value = this.gain; this.source.connect(this.gainNode);
         this.freqData = new Uint8Array(this.analyser.frequencyBinCount);
         this.isReady = true; this.isMuted = false;
       }
-
       disconnect() {
         if (this.stream) this.stream.getTracks().forEach(t => t.stop());
         if (this.source) { this.source.disconnect(); this.source = null; }
-        this.isReady = false; this.isMuted = true; this.envelope = 0.0; this.fuzzDrive = 0.0; this.energy.total = 0.0;
+        this.isReady = false; this.isMuted = true; this.envelope = 0.0;
       }
-
-      update(activeStyle, p2Idle, p3RotSpeed, isGridActive) {
-        const now = performance.now(); const dt = Math.min((now - this.lastTime) / 1000.0, 0.1); this.lastTime = now;
-        if (isGridActive) return;
+      update(dt) {
         if (!this.isReady || this.isMuted) {
           this.envelope = 0.0; this.fuzzDrive = 0.0; this.energy.total = 0.0;
-          if (activeStyle === 1) { this.wavePhase += (p2Idle || 0.08) * dt; this.spinPhase += ((p2Idle || 0.08) * 0.5) * dt; }
-          else if (activeStyle === 2) { this.p3RotPhase += (p3RotSpeed !== undefined ? p3RotSpeed : 0.35) * dt; }
-          return;
+          this.wavePhase += 0.08 * dt; this.spinPhase += 0.04 * dt; this.p3RotPhase += 0.35 * dt; return;
         }
-
         this.analyser.getByteFrequencyData(this.freqData);
-        const len = this.freqData.length; const bEnd = Math.floor(len * 0.12); const mEnd = Math.floor(len * 0.45);
-        let sumB = 0, sumM = 0, sumT = 0, sumAll = 0;
+        const len = this.freqData.length, bEnd = Math.floor(len * 0.12), mEnd = Math.floor(len * 0.45);
+        let sB = 0, sM = 0, sT = 0, sAll = 0;
         for (let i = 0; i < len; i++) {
-          const v = this.freqData[i] / 255.0; sumAll += v * v;
-          if (i < bEnd) sumB += v; else if (i < mEnd) sumM += v; else sumT += v;
+          const v = this.freqData[i] / 255.0; sAll += v * v;
+          if (i < bEnd) sB += v; else if (i < mEnd) sM += v; else sT += v;
         }
-        const rms = Math.sqrt(sumAll / len);
-        let target = (rms > this.gate) ? Math.min(1.0, ((rms - this.gate) / (1.0 - this.gate)) * this.sens) : 0.0;
-        this.envelope += (target > this.envelope) ? (target - this.envelope) * 0.45 : (target - this.envelope) * 0.16;
+        const rms = Math.sqrt(sAll / len);
+        let tgt = (rms > this.gate) ? Math.min(1.0, ((rms - this.gate) / (1.0 - this.gate)) * this.sens) : 0.0;
+        this.envelope += (tgt > this.envelope) ? (tgt - this.envelope) * 0.45 : (tgt - this.envelope) * 0.16;
         if (this.envelope < 0.001) this.envelope = 0.0;
-
         this.energy.total = this.envelope;
-        this.energy.bass = (sumB / bEnd) * this.envelope * this.bassAtt;
-        this.energy.mid = (sumM / (mEnd - bEnd)) * this.envelope;
-        this.energy.treble = (sumT / (len - mEnd)) * this.envelope;
-
+        this.energy.bass = (sB / bEnd) * this.envelope * this.bassAtt;
+        this.energy.mid = (sM / (mEnd - bEnd)) * this.envelope;
+        this.energy.treble = (sT / (len - mEnd)) * this.envelope;
         this.fuzzDrive += (Math.max(0.0, Math.min(this.energy.mid, this.energy.treble * 1.3) * 2.2 * this.envelope) - this.fuzzDrive) * 0.2;
-
-        if (activeStyle === 0) {
-          this.wavePhase += ((this.envelope > 0.001 ? (2.2 + this.energy.bass * 4.0 + this.fuzzDrive * 3.5) : 0.3)) * dt;
-          this.spinPhase += (this.energy.mid * 1.5 + this.fuzzDrive * 2.0) * dt;
-        } else if (activeStyle === 1) {
-          this.wavePhase += ((p2Idle !== undefined ? p2Idle : 0.08) + (this.energy.bass * 4.5 + this.fuzzDrive * 4.0) * this.motionRate) * dt;
-          this.spinPhase += ((p2Idle !== undefined ? p2Idle : 0.08) * 0.5 + (this.energy.mid * 2.0 + this.fuzzDrive * 2.5) * this.motionRate) * dt;
-        } else {
-          this.p3RotPhase += ((p3RotSpeed !== undefined ? p3RotSpeed : 0.35) + this.energy.mid * 1.6 + this.fuzzDrive * 2.5) * dt;
-          this.wavePhase += (this.energy.bass * 3.5 + this.fuzzDrive * 2.5) * dt;
-        }
+        this.wavePhase += (this.envelope > 0.001 ? (2.2 + this.energy.bass * 4.5 + this.fuzzDrive * 3.5) : 0.3) * dt * this.motionRate;
+        this.spinPhase += ((this.energy.mid * 2.0 + this.fuzzDrive * 2.0) + 0.1) * dt;
+        this.p3RotPhase += (0.35 + this.energy.mid * 1.6 + this.fuzzDrive * 2.5) * dt;
       }
     }
 
-    class ProjectionMapper {
-      constructor(wrapperId) {
-        this.wrapper = document.getElementById(wrapperId); this.w = window.innerWidth; this.h = window.innerHeight;
-        this.pins = []; this.points = []; this.visible = false;
-        this.load(); this.createPins(); this.updateMatrix();
-      }
-
-      syncDimensions(w, h) { this.w = w; this.h = h; this.wrapper.style.width = `${w}px`; this.wrapper.style.height = `${h}px`; this.updateMatrix(); }
-      load() {
-        const s = localStorage.getItem('audioview_pins_v16');
-        if (s) { try { const p = JSON.parse(s); if (Array.isArray(p) && p.length === 4) { this.points = p; return; } } catch(e){} }
-        this.resetToDefault();
-      }
-      resetToDefault() {
-        const mx = window.innerWidth * 0.05, my = window.innerHeight * 0.05;
-        this.points = [{ x: mx, y: my }, { x: window.innerWidth - mx, y: my }, { x: window.innerWidth - mx, y: window.innerHeight - my }, { x: mx, y: window.innerHeight - my }];
-      }
-      save() { localStorage.setItem('audioview_pins_v16', JSON.stringify(this.points)); }
-      reset() { localStorage.removeItem('audioview_pins_v16'); this.resetToDefault(); this.sync(); this.updateMatrix(); }
-
-      createPins() {
-        for (let i = 0; i < 4; i++) {
-          const pin = document.getElementById(`pin-${i}`); this.pins.push(pin); this.bindDrag(pin, i);
-        }
-        this.sync(); this.pins.forEach(p => p.style.display = 'none');
-      }
-      sync() { for (let i = 0; i < 4; i++) { this.pins[i].style.left = `${this.points[i].x}px`; this.pins[i].style.top = `${this.points[i].y}px`; } }
-      setVisible(v) { this.visible = v; this.pins.forEach(p => p.style.display = this.visible ? 'block' : 'none'); }
-      togglePins() { this.setVisible(!this.visible); }
-
-      panBy(dx, dy) {
-        for (let i = 0; i < 4; i++) { this.points[i].x += dx; this.points[i].y += dy; }
-        this.sync(); this.updateMatrix(); this.save();
-      }
-
-      zoomAt(factor, cx, cy) {
-        const span = Math.hypot(this.points[2].x - this.points[0].x, this.points[2].y - this.points[0].y) * factor;
-        if (span < 60 || span > 18000) return;
-        for (let i = 0; i < 4; i++) {
-          this.points[i].x = cx + (this.points[i].x - cx) * factor;
-          this.points[i].y = cy + (this.points[i].y - cy) * factor;
-        }
-        this.sync(); this.updateMatrix(); this.save();
-      }
-
-      bindDrag(el, idx) {
-        let dragging = false;
-        const onDown = (e) => { e.preventDefault(); e.stopPropagation(); dragging = true; el.classList.add('active'); window.addEventListener('pointermove', onMove, { passive: false }); window.addEventListener('pointerup', onUp); window.addEventListener('pointercancel', onUp); };
-        const onMove = (e) => {
-          if (!dragging) return;
-          const cx = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : this.points[idx].x);
-          const cy = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : this.points[idx].y);
-          this.points[idx].x = cx; this.points[idx].y = cy; el.style.left = `${cx}px`; el.style.top = `${cy}px`; this.updateMatrix();
-        };
-        const onUp = () => { if (!dragging) return; dragging = false; el.classList.remove('active'); window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); window.removeEventListener('pointercancel', onUp); this.save(); };
-        el.addEventListener('pointerdown', onDown);
-      }
-
-      updateMatrix() {
-        const [p0, p1, p2, p3] = this.points, w = this.w, h = this.h;
-        const dx1 = p1.x - p2.x, dx2 = p3.x - p2.x, sx = p0.x - p1.x + p2.x - p3.x;
-        const dy1 = p1.y - p2.y, dy2 = p3.y - p2.y, sy = p0.y - p1.y + p2.y - p3.y;
-        let a11, a12, a13, a21, a22, a23, a31 = 0.0, a32 = 0.0;
-        if (Math.abs(sx) < 1e-5 && Math.abs(sy) < 1e-5) {
-          a11 = p1.x - p0.x; a12 = p2.x - p1.x; a13 = p0.x; a21 = p1.y - p0.y; a22 = p2.y - p1.y; a23 = p0.y;
-        } else {
-          const det = dx1 * dy2 - dy1 * dx2; a31 = (sx * dy2 - sy * dx2) / det; a32 = (dx1 * sy - dy1 * sx) / det;
-          a11 = p1.x - p0.x + a31 * p1.x; a12 = p3.x - p0.x + a32 * p3.x; a13 = p0.x;
-          a21 = p1.y - p0.y + a31 * p1.y; a22 = p3.y - p0.y + a32 * p3.y; a23 = p0.y;
-        }
-        this.wrapper.style.transform = `matrix3d(${a11/w}, ${a21/w}, 0, ${a31/w}, ${a12/h}, ${a22/h}, 0, ${a32/h}, 0, 0, 1, 0, ${a13}, ${a23}, 0, 1.0)`;
-      }
-    }
-
-    class WebGLVizzRenderer {
-      constructor(canvasId, audio) {
-        this.canvas = document.getElementById(canvasId);
-        this.gl = this.canvas.getContext('webgl', { antialias: true, alpha: false, preserveDrawingBuffer: false });
-        this.audio = audio; this.activeStyle = 0; this.prevStyle = 0; this.transStartTime = 0; this.isGridMode = false;
-
-        this.s1 = {
-          audio: { smoothing: 0.75, sens: 5.0, gain: 1.3, gate: 0.04, bassAtt: 0.80 },
-          dotColor: [0.898, 0.729, 0.0], gridW: 187, gridH: 120, dotSize: 0.01, spacing: 0.4, maxScale: 3.0,
-          waveMod: 2.0, heightDisp: 3.0, colorReact: 1.0, waterDist: 0.45, pondRipple: 0.30, swirl: 0.0, barrel: 0.0,
-          trailEnable: true, persistence: 0.88, zoomRate: 1.010, kaleidoEnable: true, segments: 8, twist: 0.0, zoom: 1.0, concentricEnable: true, ringScale: 2.96, mirrorRings: true
-        };
-
-        this.s2 = {
-          audio: { smoothing: 0.72, sens: 5.5, gain: 1.4, gate: 0.035, bassAtt: 0.75 },
-          colShadow: [0.21, 0.01, 0.30], colMid: [0.74, 0.32, 0.23], colHigh: [0.0, 0.83, 1.0], colC4: [1.0, 0.13, 0.0],
-          bgFill: 0.80, gapSize: 0.7, cellScale: 6.5, gradShift: 0.0, idleSpeed: 0.08, splashForce: 2.0, fluidGloss: 1.4, iridSheen: 0.45, viscTension: 1.8,
-          trailEnable: false, persistence: 0.0, zoomRate: 1.000
-        };
-
-        this.s3 = {
-          audio: { smoothing: 0.70, sens: 5.8, gain: 1.5, gate: 0.03, bassAtt: 0.70 },
-          segments: 8, rotSpeed: 0.35, density: 2.2, zoom: 1.0, twist: 0.5, contrast: 1.4, bump: 2.0, gloss: 1.8, shadow: 0.7, chroma: 0.6,
-          col1: [0.13, 0.0, 0.27], col2: [1.0, 0.23, 0.0], col3: [0.0, 0.96, 0.83], trailEnable: false, persistence: 0.0, zoomRate: 1.000
-        };
-
+    class SurfaceShaderRenderer {
+      constructor(canvas) {
+        this.canvas = canvas; this.gl = canvas.getContext('webgl', { antialias: true, alpha: false, preserveDrawingBuffer: false });
         this.init();
       }
-
       init() {
-        const gl = this.gl;
-        const createProg = (vs, fs) => {
+        const gl = this.gl; if (!gl) return;
+        const cp = (vs, fs) => {
           const p = gl.createProgram(), v = gl.createShader(gl.VERTEX_SHADER), f = gl.createShader(gl.FRAGMENT_SHADER);
           gl.shaderSource(v, vs); gl.compileShader(v); gl.shaderSource(f, fs); gl.compileShader(f);
           gl.attachShader(p, v); gl.attachShader(p, f); gl.linkProgram(p); return p;
         };
-
-        this.progDraw = createProg(document.getElementById('vs-main').text, document.getElementById('fs-draw').text);
-        this.progTrails = createProg(document.getElementById('vs-main').text, document.getElementById('fs-trails').text);
-
+        this.progDraw = cp(document.getElementById('vs-main').text, document.getElementById('fs-draw').text);
+        this.progTrails = cp(document.getElementById('vs-main').text, document.getElementById('fs-trails').text);
         const vbo = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
         const pos = gl.getAttribLocation(this.progDraw, 'position');
         gl.enableVertexAttribArray(pos); gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
 
-        this.fboDraw = null; this.fboPing = null; this.fboPong = null;
-        this.getUniformLocations();
+        this.fboDraw = this.createFBO(); this.fboPing = this.createFBO(); this.fboPong = this.createFBO();
+        const gd = (n) => gl.getUniformLocation(this.progDraw, n);
+        this.uD = {
+          res: gd('u_resolution'), style: gd('u_style'), isGrid: gd('u_isGrid'), audio: gd('u_audio'),
+          bass: gd('u_bass'), mid: gd('u_mid'), treb: gd('u_treb'), fuzz: gd('u_fuzz'), waveP: gd('u_waveP'), spinP: gd('u_spinP'), p3RotP: gd('u_p3RotP'),
+          dotColor: gd('u_dotColor'), gridW: gd('u_gridW'), gridH: gd('u_gridH'), dotSize: gd('u_dotSize'), spacing: gd('u_spacing'), maxScale: gd('u_maxScale'),
+          waveMod: gd('u_waveMod'), colorReact: gd('u_colorReact'), kaleidoEnable: gd('u_kaleidoEnable'), segments: gd('u_segments'), twist: gd('u_twist'),
+          zoom: gd('u_zoom'), concentricEnable: gd('u_concentricEnable'), ringScale: gd('u_ringScale'),
+          colShadow: gd('u_colShadow'), colMid: gd('u_colMid'), colHigh: gd('u_colHigh'), colC4: gd('u_colC4'),
+          bgFill: gd('u_bgFill'), gapSize: gd('u_gapSize'), cellScale: gd('u_cellScale'), gradShift: gd('u_gradShift'), splashForce: gd('u_splashForce'),
+          fluidGloss: gd('u_fluidGloss'), iridSheen: gd('u_iridSheen'), viscTension: gd('u_viscTension'),
+          p3Segments: gd('u_p3Segments'), p3Density: gd('u_p3Density'), p3Zoom: gd('u_p3Zoom'), p3Twist: gd('u_p3Twist'), p3Contrast: gd('u_p3Contrast'),
+          p3Bump: gd('u_p3Bump'), p3Gloss: gd('u_p3Gloss'), p3Shadow: gd('u_p3Shadow'), p3Chroma: gd('u_p3Chroma'),
+          p3Col1: gd('u_p3Col1'), p3Col2: gd('u_p3Col2'), p3Col3: gd('u_p3Col3')
+        };
+        const gt = (n) => gl.getUniformLocation(this.progTrails, n);
+        this.uT = { cur: gt('u_cur'), prev: gt('u_prev'), persist: gt('u_persist'), zoom: gt('u_zoom'), enableTrails: gt('u_enableTrails') };
       }
-
-      updateViewport(mapper) {
-        const w = window.innerWidth, h = window.innerHeight;
-        if (this.canvas.width !== w || this.canvas.height !== h) {
-          this.canvas.width = w; this.canvas.height = h;
-          const gl = this.gl;
-          if (this.fboDraw) {
-            gl.deleteFramebuffer(this.fboDraw.fb); gl.deleteTexture(this.fboDraw.tex);
-            gl.deleteFramebuffer(this.fboPing.fb); gl.deleteTexture(this.fboPing.tex);
-            gl.deleteFramebuffer(this.fboPong.fb); gl.deleteTexture(this.fboPong.tex);
-          }
-          this.fboDraw = this.createFBO(); this.fboPing = this.createFBO(); this.fboPong = this.createFBO();
-          if (mapper) mapper.syncDimensions(w, h);
-        }
-      }
-
       createFBO() {
         const gl = this.gl, fb = gl.createFramebuffer(), tex = gl.createTexture();
         gl.bindFramebuffer(gl.FRAMEBUFFER, fb); gl.bindTexture(gl.TEXTURE_2D, tex);
@@ -742,84 +512,40 @@
         gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
         return { fb, tex };
       }
-
-      getUniformLocations() {
-        const gl = this.gl, d = this.progDraw;
-        this.uD = {
-          res: gl.getUniformLocation(d, 'u_resolution'), style: gl.getUniformLocation(d, 'u_style'), prevStyle: gl.getUniformLocation(d, 'u_prevStyle'),
-          transProgress: gl.getUniformLocation(d, 'u_transProgress'), isGrid: gl.getUniformLocation(d, 'u_isGridMode'),
-          audio: gl.getUniformLocation(d, 'u_audioEnergy'), bass: gl.getUniformLocation(d, 'u_bass'), mid: gl.getUniformLocation(d, 'u_mid'),
-          treb: gl.getUniformLocation(d, 'u_treble'), fuzz: gl.getUniformLocation(d, 'u_fuzzDrive'),
-          waveP: gl.getUniformLocation(d, 'u_wavePhase'), spinP: gl.getUniformLocation(d, 'u_spinPhase'), p3RotP: gl.getUniformLocation(d, 'u_p3RotPhase'),
-          dotColor: gl.getUniformLocation(d, 'u_dotColor'), gridW: gl.getUniformLocation(d, 'u_gridW'), gridH: gl.getUniformLocation(d, 'u_gridH'),
-          dotSize: gl.getUniformLocation(d, 'u_baseDotSize'), spacing: gl.getUniformLocation(d, 'u_spacing'), maxScale: gl.getUniformLocation(d, 'u_maxScale'),
-          waveMod: gl.getUniformLocation(d, 'u_waveMod'), heightDisp: gl.getUniformLocation(d, 'u_heightDisp'), colorReact: gl.getUniformLocation(d, 'u_colorReact'),
-          waterDist: gl.getUniformLocation(d, 'u_waterDist'), pondRipple: gl.getUniformLocation(d, 'u_pondRipple'), swirl: gl.getUniformLocation(d, 'u_swirl'),
-          barrel: gl.getUniformLocation(d, 'u_barrel'), kaleidoEnable: gl.getUniformLocation(d, 'u_kaleidoEnable'), segments: gl.getUniformLocation(d, 'u_segments'),
-          twist: gl.getUniformLocation(d, 'u_twist'), zoom: gl.getUniformLocation(d, 'u_zoom'), concentricEnable: gl.getUniformLocation(d, 'u_concentricEnable'),
-          ringScale: gl.getUniformLocation(d, 'u_ringScale'), mirrorRings: gl.getUniformLocation(d, 'u_mirrorRings'),
-          colShadow: gl.getUniformLocation(d, 'u_colShadow'), colMid: gl.getUniformLocation(d, 'u_colMid'), colHigh: gl.getUniformLocation(d, 'u_colHigh'),
-          colC4: gl.getUniformLocation(d, 'u_colC4'), bgFill: gl.getUniformLocation(d, 'u_bgFill'), gapSize: gl.getUniformLocation(d, 'u_gapSize'),
-          cellScale: gl.getUniformLocation(d, 'u_cellScale'), gradShift: gl.getUniformLocation(d, 'u_gradShift'), splashForce: gl.getUniformLocation(d, 'u_splashForce'),
-          fluidGloss: gl.getUniformLocation(d, 'u_fluidGloss'), iridSheen: gl.getUniformLocation(d, 'u_iridSheen'), viscTension: gl.getUniformLocation(d, 'u_viscTension'),
-          p3Segments: gl.getUniformLocation(d, 'u_p3Segments'), p3Density: gl.getUniformLocation(d, 'u_p3Density'), p3Zoom: gl.getUniformLocation(d, 'u_p3Zoom'),
-          p3Twist: gl.getUniformLocation(d, 'u_p3Twist'), p3Contrast: gl.getUniformLocation(d, 'u_p3Contrast'), p3Bump: gl.getUniformLocation(d, 'u_p3Bump'),
-          p3Gloss: gl.getUniformLocation(d, 'u_p3Gloss'), p3Shadow: gl.getUniformLocation(d, 'u_p3Shadow'), p3Chroma: gl.getUniformLocation(d, 'u_p3Chroma'),
-          p3Col1: gl.getUniformLocation(d, 'u_p3Col1'), p3Col2: gl.getUniformLocation(d, 'u_p3Col2'), p3Col3: gl.getUniformLocation(d, 'u_p3Col3')
-        };
-        const t = this.progTrails;
-        this.uT = {
-          cur: gl.getUniformLocation(t, 'u_currentFrame'), prev: gl.getUniformLocation(t, 'u_prevFrame'),
-          persist: gl.getUniformLocation(t, 'u_persistence'), zoom: gl.getUniformLocation(t, 'u_zoomRate'),
-          audio: gl.getUniformLocation(t, 'u_audioEnergy'), enableTrails: gl.getUniformLocation(t, 'u_enableTrails')
-        };
-      }
-
-      render() {
-        const gl = this.gl; if (!this.fboDraw) return;
+      render(surf, audio, isGrid) {
+        const gl = this.gl; if (!gl || !this.fboDraw) return;
         gl.viewport(0, 0, this.canvas.width, this.canvas.height);
-
-        if (this.isGridMode) {
+        if (isGrid) {
           gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.useProgram(this.progDraw);
           gl.uniform2f(this.uD.res, this.canvas.width, this.canvas.height); gl.uniform1i(this.uD.isGrid, 1);
           gl.drawArrays(gl.TRIANGLES, 0, 6); return;
         }
-
         gl.bindFramebuffer(gl.FRAMEBUFFER, this.fboDraw.fb); gl.useProgram(this.progDraw);
-        const progress = Math.min(1.0, Math.max(0.0, (performance.now() - this.transStartTime) / 800.0));
-
         gl.uniform2f(this.uD.res, this.canvas.width, this.canvas.height);
-        gl.uniform1f(this.uD.style, this.activeStyle); gl.uniform1f(this.uD.prevStyle, this.prevStyle); gl.uniform1f(this.uD.transProgress, progress);
-        gl.uniform1i(this.uD.isGrid, 0); gl.uniform1f(this.uD.audio, this.audio.energy.total);
-        gl.uniform1f(this.uD.bass, this.audio.energy.bass); gl.uniform1f(this.uD.mid, this.audio.energy.mid); gl.uniform1f(this.uD.treb, this.audio.energy.treble);
-        gl.uniform1f(this.uD.fuzz, this.audio.fuzzDrive); gl.uniform1f(this.uD.waveP, this.audio.wavePhase);
-        gl.uniform1f(this.uD.spinP, this.audio.spinPhase); gl.uniform1f(this.uD.p3RotP, this.audio.p3RotPhase);
+        gl.uniform1f(this.uD.style, surf.styleIdx); gl.uniform1i(this.uD.isGrid, 0);
+        gl.uniform1f(this.uD.audio, audio.energy.total); gl.uniform1f(this.uD.bass, audio.energy.bass);
+        gl.uniform1f(this.uD.mid, audio.energy.mid); gl.uniform1f(this.uD.treb, audio.energy.treble);
+        gl.uniform1f(this.uD.fuzz, audio.fuzzDrive); gl.uniform1f(this.uD.waveP, audio.wavePhase);
+        gl.uniform1f(this.uD.spinP, audio.spinPhase); gl.uniform1f(this.uD.p3RotP, audio.p3RotPhase);
 
-        const p1 = this.s1;
-        gl.uniform3fv(this.uD.dotColor, p1.dotColor || [0.9, 0.7, 0.0]);
-        gl.uniform1f(this.uD.gridW, p1.gridW || 187); gl.uniform1f(this.uD.gridH, p1.gridH || 120);
-        gl.uniform1f(this.uD.dotSize, p1.dotSize || 0.01); gl.uniform1f(this.uD.spacing, p1.spacing || 0.4);
-        gl.uniform1f(this.uD.maxScale, p1.maxScale || 3.0); gl.uniform1f(this.uD.waveMod, p1.waveMod || 2.0);
-        gl.uniform1f(this.uD.heightDisp, p1.heightDisp || 3.0); gl.uniform1f(this.uD.colorReact, p1.colorReact || 1.0);
-        gl.uniform1f(this.uD.waterDist, p1.waterDist || 0.45); gl.uniform1f(this.uD.pondRipple, p1.pondRipple || 0.3);
-        gl.uniform1f(this.uD.swirl, p1.swirl || 0.0); gl.uniform1f(this.uD.barrel, p1.barrel || 0.0);
+        const p1 = surf.s1;
+        gl.uniform3fv(this.uD.dotColor, p1.dotColor || [0.9, 0.7, 0.0]); gl.uniform1f(this.uD.gridW, p1.gridW || 187);
+        gl.uniform1f(this.uD.gridH, p1.gridH || 120); gl.uniform1f(this.uD.dotSize, p1.dotSize || 0.01);
+        gl.uniform1f(this.uD.spacing, p1.spacing || 0.4); gl.uniform1f(this.uD.maxScale, p1.maxScale || 3.0);
+        gl.uniform1f(this.uD.waveMod, p1.waveMod || 2.0); gl.uniform1f(this.uD.colorReact, p1.colorReact || 1.0);
         gl.uniform1i(this.uD.kaleidoEnable, p1.kaleidoEnable ? 1 : 0); gl.uniform1f(this.uD.segments, p1.segments || 8);
         gl.uniform1f(this.uD.twist, p1.twist || 0.0); gl.uniform1f(this.uD.zoom, p1.zoom || 1.0);
         gl.uniform1i(this.uD.concentricEnable, p1.concentricEnable ? 1 : 0); gl.uniform1f(this.uD.ringScale, p1.ringScale || 2.96);
-        gl.uniform1i(this.uD.mirrorRings, p1.mirrorRings ? 1 : 0);
 
-        const p2 = this.s2;
-        gl.uniform3fv(this.uD.colShadow, p2.colShadow || [0.21, 0.01, 0.30]);
-        gl.uniform3fv(this.uD.colMid, p2.colMid || [0.74, 0.32, 0.23]);
-        gl.uniform3fv(this.uD.colHigh, p2.colHigh || [0.0, 0.83, 1.0]);
-        gl.uniform3fv(this.uD.colC4, p2.colC4 || [1.0, 0.13, 0.0]);
-        gl.uniform1f(this.uD.bgFill, p2.bgFill !== undefined ? p2.bgFill : 0.8);
-        gl.uniform1f(this.uD.gapSize, p2.gapSize || 0.7); gl.uniform1f(this.uD.cellScale, p2.cellScale || 6.5);
-        gl.uniform1f(this.uD.gradShift, p2.gradShift || 0.0); gl.uniform1f(this.uD.splashForce, p2.splashForce || 2.0);
-        gl.uniform1f(this.uD.fluidGloss, p2.fluidGloss || 1.4); gl.uniform1f(this.uD.iridSheen, p2.iridSheen !== undefined ? p2.iridSheen : 0.45);
-        gl.uniform1f(this.uD.viscTension, p2.viscTension || 1.8);
+        const p2 = surf.s2;
+        gl.uniform3fv(this.uD.colShadow, p2.colShadow || [0.21, 0.01, 0.30]); gl.uniform3fv(this.uD.colMid, p2.colMid || [0.74, 0.32, 0.23]);
+        gl.uniform3fv(this.uD.colHigh, p2.colHigh || [0.0, 0.83, 1.0]); gl.uniform3fv(this.uD.colC4, p2.colC4 || [1.0, 0.13, 0.0]);
+        gl.uniform1f(this.uD.bgFill, p2.bgFill !== undefined ? p2.bgFill : 0.8); gl.uniform1f(this.uD.gapSize, p2.gapSize || 0.7);
+        gl.uniform1f(this.uD.cellScale, p2.cellScale || 6.5); gl.uniform1f(this.uD.gradShift, p2.gradShift || 0.0);
+        gl.uniform1f(this.uD.splashForce, p2.splashForce || 2.0); gl.uniform1f(this.uD.fluidGloss, p2.fluidGloss || 1.4);
+        gl.uniform1f(this.uD.iridSheen, p2.iridSheen !== undefined ? p2.iridSheen : 0.45); gl.uniform1f(this.uD.viscTension, p2.viscTension || 1.8);
 
-        const p3 = this.s3;
+        const p3 = surf.s3;
         gl.uniform1f(this.uD.p3Segments, p3.segments || 8.0); gl.uniform1f(this.uD.p3Density, p3.density || 2.2);
         gl.uniform1f(this.uD.p3Zoom, p3.zoom || 1.0); gl.uniform1f(this.uD.p3Twist, p3.twist || 0.5);
         gl.uniform1f(this.uD.p3Contrast, p3.contrast || 1.4); gl.uniform1f(this.uD.p3Bump, p3.bump || 2.0);
@@ -827,100 +553,251 @@
         gl.uniform1f(this.uD.p3Chroma, p3.chroma !== undefined ? p3.chroma : 0.6);
         gl.uniform3fv(this.uD.p3Col1, p3.col1 || [0.13, 0.0, 0.27]); gl.uniform3fv(this.uD.p3Col2, p3.col2 || [1.0, 0.23, 0.0]);
         gl.uniform3fv(this.uD.p3Col3, p3.col3 || [0.0, 0.96, 0.83]);
-
         gl.drawArrays(gl.TRIANGLES, 0, 6);
 
-        const cfg = this.getActiveConfig();
+        const cfg = surf.styleIdx === 0 ? surf.s1 : (surf.styleIdx === 1 ? surf.s2 : surf.s3);
         gl.bindFramebuffer(gl.FRAMEBUFFER, this.fboPong.fb); gl.useProgram(this.progTrails);
         gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, this.fboDraw.tex); gl.uniform1i(this.uT.cur, 0);
         gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, this.fboPing.tex); gl.uniform1i(this.uT.prev, 1);
         gl.uniform1f(this.uT.persist, cfg.persistence || 0.0); gl.uniform1f(this.uT.zoom, cfg.zoomRate || 1.0);
-        gl.uniform1f(this.uT.audio, this.audio.energy.total); gl.uniform1i(this.uT.enableTrails, cfg.trailEnable ? 1 : 0);
+        gl.uniform1i(this.uT.enableTrails, cfg.trailEnable ? 1 : 0);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, this.fboPong.tex); gl.uniform1i(this.uT.cur, 0);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
-
-        const temp = this.fboPing; this.fboPing = this.fboPong; this.fboPong = temp;
+        const tmp = this.fboPing; this.fboPing = this.fboPong; this.fboPong = tmp;
       }
+      destroy() {
+        const gl = this.gl; if (!gl) return;
+        if (this.fboDraw) { gl.deleteFramebuffer(this.fboDraw.fb); gl.deleteTexture(this.fboDraw.tex); }
+        if (this.fboPing) { gl.deleteFramebuffer(this.fboPing.fb); gl.deleteTexture(this.fboPing.tex); }
+        if (this.fboPong) { gl.deleteFramebuffer(this.fboPong.fb); gl.deleteTexture(this.fboPong.tex); }
+        const ext = gl.getExtension('WEBGL_lose_context'); if (ext) ext.loseContext();
+      }
+    }
 
-      getActiveConfig() { return this.activeStyle === 0 ? this.s1 : (this.activeStyle === 1 ? this.s2 : this.s3); }
+    class MultiSurfaceManager {
+      constructor(audio) {
+        this.audio = audio; this.container = document.getElementById('surfaces-layer');
+        this.surfaces = []; this.activeId = null; this.isGridMode = false; this.pinsVisible = true;
+        this.pins = [document.getElementById('pin-0'), document.getElementById('pin-1'), document.getElementById('pin-2'), document.getElementById('pin-3')];
+        this.bindPinDrag(); this.load();
+      }
+      getDefaults() {
+        return {
+          s1: { dotColor: [0.898, 0.729, 0.0], gridW: 187, gridH: 120, dotSize: 0.01, spacing: 0.4, maxScale: 3.0, waveMod: 2.0, colorReact: 1.0, trailEnable: true, persistence: 0.88, zoomRate: 1.01, kaleidoEnable: true, segments: 8, twist: 0.0, zoom: 1.0, concentricEnable: true, ringScale: 2.96 },
+          s2: { colShadow: [0.21, 0.01, 0.30], colMid: [0.74, 0.32, 0.23], colHigh: [0.0, 0.83, 1.0], colC4: [1.0, 0.13, 0.0], bgFill: 0.8, gapSize: 0.7, cellScale: 6.5, gradShift: 0.0, idleSpeed: 0.08, splashForce: 2.0, fluidGloss: 1.4, iridSheen: 0.45, viscTension: 1.8, trailEnable: false, persistence: 0.0, zoomRate: 1.0 },
+          s3: { segments: 8, rotSpeed: 0.35, density: 2.2, zoom: 1.0, twist: 0.5, contrast: 1.4, bump: 2.0, gloss: 1.8, shadow: 0.7, chroma: 0.6, col1: [0.13, 0.0, 0.27], col2: [1.0, 0.23, 0.0], col3: [0.0, 0.96, 0.83], trailEnable: false, persistence: 0.0, zoomRate: 1.0 }
+        };
+      }
+      createData(name, pts, src = 'shader-0') {
+        const def = this.getDefaults(), W = window.innerWidth, H = window.innerHeight;
+        return {
+          id: 's_' + Math.random().toString(36).substr(2, 8), name: name || `Área ${this.surfaces.length + 1}`,
+          source: src, styleIdx: src.startsWith('shader-') ? parseInt(src.split('-')[1]) : 0,
+          mediaUrl: '', mediaMuted: true, mediaLoop: true, ytId: '', ytInteractive: false, opacity: 1.0,
+          points: pts || [{ x: W * 0.1, y: H * 0.1 }, { x: W * 0.9, y: H * 0.1 }, { x: W * 0.9, y: H * 0.9 }, { x: W * 0.1, y: H * 0.9 }],
+          s1: JSON.parse(JSON.stringify(def.s1)), s2: JSON.parse(JSON.stringify(def.s2)), s3: JSON.parse(JSON.stringify(def.s3))
+        };
+      }
+      add(data = null) {
+        const s = data || this.createData(); this.surfaces.push(s);
+        this.buildDOM(s); this.setActive(s.id); this.save(); return s;
+      }
+      clone() {
+        const cur = this.getActive(); if (!cur) return;
+        const d = JSON.parse(JSON.stringify(cur));
+        d.id = 's_' + Math.random().toString(36).substr(2, 8); d.name += ' (Cópia)';
+        d.points = d.points.map(p => ({ x: p.x + 30, y: p.y + 30 }));
+        this.add(d);
+      }
+      remove() {
+        if (this.surfaces.length <= 1) { alert("Mantenha ao menos uma área ativa."); return; }
+        const cur = this.getActive(); if (!cur) return;
+        if (cur.renderer) cur.renderer.destroy();
+        if (cur.dom) cur.dom.remove();
+        this.surfaces = this.surfaces.filter(s => s.id !== cur.id);
+        this.setActive(this.surfaces[0].id); this.save();
+      }
+      getActive() { return this.surfaces.find(s => s.id === this.activeId) || this.surfaces[0]; }
+      setActive(id) {
+        this.activeId = id;
+        this.surfaces.forEach(s => { if (s.dom) s.dom.classList.toggle('active-surface', s.id === this.activeId); });
+        this.syncPins(); window.dispatchEvent(new CustomEvent('surface-sync'));
+      }
+      buildDOM(s) {
+        const el = document.createElement('div'); el.className = 'warp-wrapper'; el.id = `quad-${s.id}`;
+        s.dom = el;
+        el.addEventListener('pointerdown', (e) => {
+          if (e.target.closest('.warp-pin')) return;
+          this.setActive(s.id); this.startPan(e, s);
+        });
+        this.container.appendChild(el); this.rebuildContent(s); this.updateMatrix(s);
+      }
+      rebuildContent(s) {
+        const el = s.dom; if (!el) return;
+        if (s.renderer) { s.renderer.destroy(); s.renderer = null; }
+        el.innerHTML = '';
+        if (s.source.startsWith('shader-')) {
+          const cvs = document.createElement('canvas'); cvs.className = 'surface-canvas';
+          cvs.width = 1280; cvs.height = 720; el.appendChild(cvs);
+          s.renderer = new SurfaceShaderRenderer(cvs);
+        } else if (s.source === 'video') {
+          const vid = document.createElement('video'); vid.className = 'surface-media';
+          vid.autoplay = true; vid.playsInline = true; vid.muted = s.mediaMuted; vid.loop = s.mediaLoop;
+          if (s.mediaUrl) vid.src = s.mediaUrl; el.appendChild(vid); s.mediaEl = vid;
+        } else if (s.source === 'image') {
+          const img = document.createElement('img'); img.className = 'surface-media';
+          if (s.mediaUrl) img.src = s.mediaUrl; el.appendChild(img); s.mediaEl = img;
+        } else if (s.source === 'youtube') {
+          const box = document.createElement('div'); box.className = `surface-yt-box ${s.ytInteractive ? 'interactive' : ''}`;
+          if (s.ytId) {
+            const ifr = document.createElement('iframe');
+            const origin = encodeURIComponent(window.location.origin && window.location.origin !== "null" ? window.location.origin : "https://www.youtube.com");
+            ifr.src = `https://www.youtube-nocookie.com/embed/${s.ytId}?autoplay=1&mute=1&loop=1&playlist=${s.ytId}&controls=0&playsinline=1&enablejsapi=1&origin=${origin}`;
+            ifr.allow = "autoplay; encrypted-media; picture-in-picture";
+            ifr.setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
+            box.appendChild(ifr);
+          }
+          el.appendChild(box); s.ytBox = box;
+        }
+        const grid = document.createElement('div'); grid.className = `quad-grid-overlay ${this.isGridMode ? 'visible' : ''}`;
+        grid.innerHTML = `<div class="quad-grid-badge">${s.name}</div>`; el.appendChild(grid); s.gridEl = grid;
+        el.style.opacity = s.opacity !== undefined ? s.opacity : 1.0;
+      }
+      updateMatrix(s) {
+        if (!s.dom) return;
+        const [p0, p1, p2, p3] = s.points, w = 1280, h = 720;
+        const dx1 = p1.x - p2.x, dx2 = p3.x - p2.x, sx = p0.x - p1.x + p2.x - p3.x;
+        const dy1 = p1.y - p2.y, dy2 = p3.y - p2.y, sy = p0.y - p1.y + p2.y - p3.y;
+        let a11, a12, a13, a21, a22, a23, a31 = 0.0, a32 = 0.0;
+        const det = dx1 * dy2 - dy1 * dx2;
+        if (Math.abs(det) < 1e-6 || (Math.abs(sx) < 1e-5 && Math.abs(sy) < 1e-5)) {
+          a11 = p1.x - p0.x; a12 = p3.x - p0.x; a13 = p0.x; a21 = p1.y - p0.y; a22 = p3.y - p0.y; a23 = p0.y;
+        } else {
+          a31 = (sx * dy2 - sy * dx2) / det; a32 = (dx1 * sy - dy1 * sx) / det;
+          a11 = p1.x - p0.x + a31 * p1.x; a12 = p3.x - p0.x + a32 * p3.x; a13 = p0.x;
+          a21 = p1.y - p0.y + a31 * p1.y; a22 = p3.y - p0.y + a32 * p3.y; a23 = p0.y;
+        }
+        s.dom.style.transform = `matrix3d(${a11/w}, ${a21/w}, 0, ${a31/w}, ${a12/h}, ${a22/h}, 0, ${a32/h}, 0, 0, 1, 0, ${a13}, ${a23}, 0, 1.0)`;
+      }
+      syncPins() {
+        const cur = this.getActive();
+        if (!cur || !this.pinsVisible) { this.pins.forEach(p => p.style.display = 'none'); return; }
+        for (let i = 0; i < 4; i++) {
+          this.pins[i].style.display = 'block'; this.pins[i].style.left = `${cur.points[i].x}px`; this.pins[i].style.top = `${cur.points[i].y}px`;
+        }
+      }
+      bindPinDrag() {
+        for (let i = 0; i < 4; i++) {
+          const pin = this.pins[i]; let dragging = false;
+          const onDown = (e) => { e.preventDefault(); e.stopPropagation(); dragging = true; pin.classList.add('active'); window.addEventListener('pointermove', onMove); window.addEventListener('pointerup', onUp); };
+          const onMove = (e) => {
+            if (!dragging) return; const cur = this.getActive(); if (!cur) return;
+            cur.points[i].x = e.clientX; cur.points[i].y = e.clientY;
+            pin.style.left = `${e.clientX}px`; pin.style.top = `${e.clientY}px`; this.updateMatrix(cur);
+          };
+          const onUp = () => { dragging = false; pin.classList.remove('active'); window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); this.save(); };
+          pin.addEventListener('pointerdown', onDown);
+        }
+      }
+      startPan(e, s) {
+        let dragging = true, lx = e.clientX, ly = e.clientY;
+        const onMove = (evt) => {
+          if (!dragging) return; const dx = evt.clientX - lx, dy = evt.clientY - ly;
+          lx = evt.clientX; ly = evt.clientY;
+          for (let i = 0; i < 4; i++) { s.points[i].x += dx; s.points[i].y += dy; }
+          this.updateMatrix(s); this.syncPins();
+        };
+        const onUp = () => { dragging = false; window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); this.save(); };
+        window.addEventListener('pointermove', onMove); window.addEventListener('pointerup', onUp);
+      }
+      zoomActive(factor, cx, cy) {
+        const cur = this.getActive(); if (!cur) return;
+        for (let i = 0; i < 4; i++) { cur.points[i].x = cx + (cur.points[i].x - cx) * factor; cur.points[i].y = cy + (cur.points[i].y - cy) * factor; }
+        this.updateMatrix(cur); this.syncPins(); this.save();
+      }
+      center(s) {
+        const W = window.innerWidth, H = window.innerHeight;
+        let cx = 0, cy = 0; s.points.forEach(p => { cx += p.x; cy += p.y; }); cx /= 4; cy /= 4;
+        const dx = W/2 - cx, dy = H/2 - cy; s.points.forEach(p => { p.x += dx; p.y += dy; });
+        this.updateMatrix(s); this.syncPins(); this.save();
+      }
+      resetPins(s) {
+        const W = window.innerWidth, H = window.innerHeight;
+        s.points = [{ x: W*0.1, y: H*0.1 }, { x: W*0.9, y: H*0.1 }, { x: W*0.9, y: H*0.9 }, { x: W*0.1, y: H*0.9 }];
+        this.updateMatrix(s); this.syncPins(); this.save();
+      }
+      setGrid(v) {
+        this.isGridMode = v;
+        this.surfaces.forEach(s => { if (s.gridEl) s.gridEl.classList.toggle('visible', v); });
+        this.pinsVisible = true; this.syncPins();
+      }
+      render(dt) {
+        for (const s of this.surfaces) {
+          if (s.source.startsWith('shader-') && s.renderer) s.renderer.render(s, this.audio, this.isGridMode);
+        }
+      }
+      save() {
+        const clean = this.surfaces.map(s => ({
+          id: s.id, name: s.name, source: s.source, styleIdx: s.styleIdx,
+          mediaUrl: s.mediaUrl && !s.mediaUrl.startsWith('blob:') ? s.mediaUrl : '',
+          mediaMuted: s.mediaMuted, mediaLoop: s.mediaLoop, ytId: s.ytId, ytInteractive: s.ytInteractive,
+          opacity: s.opacity, points: s.points, s1: s.s1, s2: s.s2, s3: s.s3
+        }));
+        localStorage.setItem('audioview_m_v17', JSON.stringify({ activeId: this.activeId, surfaces: clean }));
+      }
+      load() {
+        const raw = localStorage.getItem('audioview_m_v17');
+        if (raw) {
+          try {
+            const d = JSON.parse(raw);
+            if (Array.isArray(d.surfaces) && d.surfaces.length) {
+              d.surfaces.forEach(s => this.add(s)); this.setActive(d.activeId || this.surfaces[0].id); return;
+            }
+          } catch(e){}
+        }
+        this.add(this.createData("Área 1"));
+      }
+      exportPreset() {
+        return {
+          version: "v17", activeId: this.activeId,
+          audio: { sens: this.audio.sens, gain: this.audio.gain, gate: this.audio.gate, smoothing: this.audio.smoothing, bassAtt: this.audio.bassAtt, motionRate: this.audio.motionRate },
+          surfaces: this.surfaces.map(s => ({ id: s.id, name: s.name, source: s.source, styleIdx: s.styleIdx, mediaUrl: s.mediaUrl && !s.mediaUrl.startsWith('blob:') ? s.mediaUrl : '', ytId: s.ytId, opacity: s.opacity, points: s.points, s1: s.s1, s2: s.s2, s3: s.s3 }))
+        };
+      }
+      importPreset(d) {
+        if (!d || !Array.isArray(d.surfaces)) return;
+        this.surfaces.forEach(s => { if (s.renderer) s.renderer.destroy(); if (s.dom) s.dom.remove(); });
+        this.surfaces = []; d.surfaces.forEach(s => this.add(s)); this.setActive(d.activeId || this.surfaces[0].id);
+        if (d.audio) Object.assign(this.audio, d.audio);
+        this.save();
+      }
     }
 
     window.addEventListener('DOMContentLoaded', () => {
-      const audio = new AudioEngine(), mapper = new ProjectionMapper('warp-wrapper'), renderer = new WebGLVizzRenderer('glCanvas', audio);
-      function handleResize() { renderer.updateViewport(mapper); }
-      handleResize(); window.addEventListener('resize', handleResize);
-
-      let wakeLock = null;
-      async function requestWakeLock() { if ('wakeLock' in navigator) { try { wakeLock = await navigator.wakeLock.request('screen'); } catch(e){} } }
-      document.addEventListener('touchstart', () => requestWakeLock(), { once: true });
-      document.addEventListener('click', () => requestWakeLock(), { once: true });
-
+      const audio = new AudioEngine(), manager = new MultiSurfaceManager(audio);
       const stage = document.getElementById('projection-stage');
-      let isMousePanning = false, lastMousePos = { x: 0, y: 0 };
-      stage.addEventListener('mousedown', (e) => {
-        if (e.button !== 0 || e.target.closest('.warp-pin, #sidebar-drawer, #top-bar, #btn-hud-float, #btn-grid-save-exit, #permission-modal')) return;
-        isMousePanning = true; lastMousePos = { x: e.clientX, y: e.clientY };
-      });
-      window.addEventListener('mousemove', (e) => {
-        if (!isMousePanning) return;
-        mapper.panBy(e.clientX - lastMousePos.x, e.clientY - lastMousePos.y);
-        lastMousePos = { x: e.clientX, y: e.clientY };
-      });
-      window.addEventListener('mouseup', () => { isMousePanning = false; });
-      window.addEventListener('wheel', (e) => {
-        if (e.target.closest('#sidebar-drawer, #permission-modal, #top-bar')) return;
-        e.preventDefault(); mapper.zoomAt(e.deltaY < 0 ? 1.05 : 0.95, e.clientX, e.clientY);
-      }, { passive: false });
 
-      let isTouchPanning = false, lastTouchPos = { x: 0, y: 0 }, initialPinchDist = null, initialPinchCenter = null;
-      stage.addEventListener('touchstart', (e) => {
-        if (e.target.closest('.warp-pin, #sidebar-drawer, #top-bar, #btn-hud-float, #btn-grid-save-exit, #permission-modal')) { isTouchPanning = false; return; }
-        if (e.touches.length === 1) {
-          isTouchPanning = true; lastTouchPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-        } else if (e.touches.length === 2) {
-          isTouchPanning = false;
-          initialPinchDist = Math.hypot(e.touches[1].clientX - e.touches[0].clientX, e.touches[1].clientY - e.touches[0].clientY);
-          initialPinchCenter = { x: (e.touches[0].clientX + e.touches[1].clientX) * 0.5, y: (e.touches[0].clientY + e.touches[1].clientY) * 0.5 };
-        }
+      stage.addEventListener('wheel', (e) => {
+        if (e.target.closest('#sidebar-drawer, #top-bar')) return;
+        e.preventDefault(); manager.zoomActive(e.deltaY < 0 ? 1.05 : 0.95, e.clientX, e.clientY);
       }, { passive: false });
-
-      stage.addEventListener('touchmove', (e) => {
-        if (e.touches.length === 1 && isTouchPanning) {
-          e.preventDefault();
-          mapper.panBy(e.touches[0].clientX - lastTouchPos.x, e.touches[0].clientY - lastTouchPos.y);
-          lastTouchPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-        } else if (e.touches.length === 2 && initialPinchDist && initialPinchCenter) {
-          e.preventDefault();
-          const dist = Math.hypot(e.touches[1].clientX - e.touches[0].clientX, e.touches[1].clientY - e.touches[0].clientY);
-          if (initialPinchDist > 5 && dist > 5) {
-            mapper.zoomAt(dist / initialPinchDist, initialPinchCenter.x, initialPinchCenter.y);
-            initialPinchDist = dist;
-            initialPinchCenter = { x: (e.touches[0].clientX + e.touches[1].clientX) * 0.5, y: (e.touches[0].clientY + e.touches[1].clientY) * 0.5 };
-          }
-        }
-      }, { passive: false });
-
-      const endTouchGesture = (e) => {
-        if (e.touches.length === 0) { isTouchPanning = false; initialPinchDist = null; initialPinchCenter = null; }
-        else if (e.touches.length === 1) { initialPinchDist = null; initialPinchCenter = null; lastTouchPos = { x: e.touches[0].clientX, y: e.touches[0].clientY }; }
-      };
-      stage.addEventListener('touchend', endTouchGesture); stage.addEventListener('touchcancel', endTouchGesture);
 
       const specCanvas = document.getElementById('spectrum-canvas'), specCtx = specCanvas.getContext('2d');
+      let lastTime = performance.now();
       function loop() {
-        audio.update(renderer.activeStyle, renderer.s2.idleSpeed, renderer.s3.rotSpeed, renderer.isGridMode);
-        renderer.render();
-        if (audio.isReady && !audio.isMuted && !renderer.isGridMode) {
+        const now = performance.now(), dt = Math.min((now - lastTime) / 1000.0, 0.1);
+        lastTime = now; audio.update(dt); manager.render(dt);
+        if (audio.isReady && !audio.isMuted && !manager.isGridMode) {
           specCtx.fillStyle = '#0c0c0f'; specCtx.fillRect(0, 0, specCanvas.width, specCanvas.height);
-          const len = audio.freqData.length, barW = specCanvas.width / len;
+          const len = audio.freqData.length, bw = specCanvas.width / len;
           for (let i = 0; i < len; i++) {
             const raw = audio.freqData[i] / 255.0;
-            specCtx.fillStyle = 'rgba(58, 134, 255, 0.4)'; specCtx.fillRect(i * barW, specCanvas.height - raw * specCanvas.height, barW - 1, raw * specCanvas.height);
+            specCtx.fillStyle = 'rgba(58, 134, 255, 0.4)'; specCtx.fillRect(i * bw, specCanvas.height - raw * specCanvas.height, bw - 1, raw * specCanvas.height);
             let proc = raw > audio.gate ? (raw - audio.gate) / (1.0 - audio.gate) : 0;
-            specCtx.fillStyle = '#00f5d4'; specCtx.fillRect(i * barW, specCanvas.height - proc * specCanvas.height * audio.envelope, barW - 1, proc * specCanvas.height * audio.envelope);
+            specCtx.fillStyle = '#00f5d4'; specCtx.fillRect(i * bw, specCanvas.height - proc * specCanvas.height * audio.envelope, bw - 1, proc * specCanvas.height * audio.envelope);
           }
         } else {
           specCtx.fillStyle = '#0c0c0f'; specCtx.fillRect(0, 0, specCanvas.width, specCanvas.height);
@@ -929,271 +806,267 @@
       }
       requestAnimationFrame(loop);
 
-      const hexToRgb = (hex) => (!hex || hex.length < 7) ? [1,1,1] : [parseInt(hex.slice(1,3),16)/255, parseInt(hex.slice(3,5),16)/255, parseInt(hex.slice(5,7),16)/255];
-      const rgbToHex = (rgb) => (!Array.isArray(rgb) || rgb.length < 3) ? "#ffffff" : `#${Math.round(Math.max(0,Math.min(1,rgb[0]))*255).toString(16).padStart(2,'0')}${Math.round(Math.max(0,Math.min(1,rgb[1]))*255).toString(16).padStart(2,'0')}${Math.round(Math.max(0,Math.min(1,rgb[2]))*255).toString(16).padStart(2,'0')}`;
+      const hexToRgb = (h) => (!h || h.length < 7) ? [1,1,1] : [parseInt(h.slice(1,3),16)/255, parseInt(h.slice(3,5),16)/255, parseInt(h.slice(5,7),16)/255];
+      const rgbToHex = (r) => (!Array.isArray(r) || r.length < 3) ? "#ffffff" : `#${Math.round(r[0]*255).toString(16).padStart(2,'0')}${Math.round(r[1]*255).toString(16).padStart(2,'0')}${Math.round(r[2]*255).toString(16).padStart(2,'0')}`;
+      const parseYt = (t) => { if (!t) return null; t = t.trim(); if (/^[a-zA-Z0-9_-]{11}$/.test(t)) return t; const m = t.match(/^.*(youtu.be\/|v\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/); return (m && m[2].length === 11) ? m[2] : null; };
 
-      function getCompleteSystemPreset() {
-        return { version: "v16", timestamp: new Date().toISOString(), activeStyle: renderer.activeStyle, s1: renderer.s1, s2: renderer.s2, s3: renderer.s3, projectionPoints: mapper.points };
-      }
-
-      function applyCompleteSystemPreset(d) {
-        if (d.s1) Object.assign(renderer.s1, d.s1); if (d.s2) Object.assign(renderer.s2, d.s2); if (d.s3) Object.assign(renderer.s3, d.s3);
-        if (d.activeStyle !== undefined) { renderer.prevStyle = renderer.activeStyle; renderer.activeStyle = d.activeStyle; renderer.transStartTime = performance.now(); }
-        if (d.projectionPoints && Array.isArray(d.projectionPoints) && d.projectionPoints.length === 4) { mapper.points = d.projectionPoints; mapper.sync(); mapper.updateMatrix(); }
-        saveAllState(); syncUI();
-      }
-
-      function saveAllState() {
-        localStorage.setItem('audioview_state_v16', JSON.stringify({ s1: renderer.s1, s2: renderer.s2, s3: renderer.s3, activeStyle: renderer.activeStyle }));
-      }
-      function loadAllState() {
-        const s = localStorage.getItem('audioview_state_v16');
-        if (s) { try { const d = JSON.parse(s); if (d.s1) Object.assign(renderer.s1, d.s1); if (d.s2) Object.assign(renderer.s2, d.s2); if (d.s3) Object.assign(renderer.s3, d.s3); if (d.activeStyle !== undefined) renderer.activeStyle = d.activeStyle; } catch(e){} }
-      }
-      loadAllState();
-
-      function applyActiveStyleAudio() {
-        const a = renderer.getActiveConfig().audio || {};
-        audio.smoothing = a.smoothing || 0.75; audio.sens = a.sens || 5.0; audio.gain = a.gain || 1.3; audio.gate = a.gate || 0.04; audio.bassAtt = a.bassAtt || 0.80;
-        if (audio.gainNode) audio.gainNode.gain.value = audio.gain;
-        if (audio.analyser) audio.analyser.smoothingTimeConstant = audio.smoothing;
-        const setA = (id, val, fix) => { const el = document.getElementById(id); if (el) { el.value = val; document.getElementById(id.replace('p-', 'v-')).innerText = Number(val).toFixed(fix); } };
-        setA('p-audio-smooth', audio.smoothing, 2); setA('p-audio-sens', audio.sens, 1); setA('p-audio-gain', audio.gain, 1); setA('p-noise-gate', audio.gate, 2); setA('p-bass-att', audio.bassAtt, 2);
-        document.getElementById('label-audio-style').innerText = `Estilo ${renderer.activeStyle + 1}`;
-      }
+      const topSel = document.getElementById('top-select-surface'), sideSel = document.getElementById('select-active-surface');
+      const inName = document.getElementById('input-surface-name'), inSrc = document.getElementById('select-surface-source');
+      const boxMedia = document.getElementById('box-source-media'), boxYt = document.getElementById('box-source-youtube');
+      const inMediaUrl = document.getElementById('input-media-url'), inYtId = document.getElementById('input-youtube-id');
+      const opSlide = document.getElementById('p-surface-opacity'), opVal = document.getElementById('v-surface-opacity');
 
       function syncUI() {
-        applyActiveStyleAudio();
-        document.getElementById('btn-select-s1').classList.toggle('active', renderer.activeStyle === 0);
-        document.getElementById('btn-select-s2').classList.toggle('active', renderer.activeStyle === 1);
-        document.getElementById('btn-select-s3').classList.toggle('active', renderer.activeStyle === 2);
-        document.getElementById('container-style-1').style.display = renderer.activeStyle === 0 ? 'block' : 'none';
-        document.getElementById('container-style-2').style.display = renderer.activeStyle === 1 ? 'block' : 'none';
-        document.getElementById('container-style-3').style.display = renderer.activeStyle === 2 ? 'block' : 'none';
+        topSel.innerHTML = ''; sideSel.innerHTML = '';
+        manager.surfaces.forEach(s => {
+          topSel.appendChild(new Option(s.name, s.id)); sideSel.appendChild(new Option(s.name, s.id));
+        });
+        topSel.value = manager.activeId; sideSel.value = manager.activeId;
+        const cur = manager.getActive(); if (!cur) return;
+        inName.value = cur.name; inSrc.value = cur.source;
+        opSlide.value = cur.opacity !== undefined ? cur.opacity : 1.0; opVal.innerText = Number(opSlide.value).toFixed(2);
+        boxMedia.style.display = (cur.source === 'video' || cur.source === 'image') ? 'flex' : 'none';
+        boxYt.style.display = cur.source === 'youtube' ? 'flex' : 'none';
+        if (cur.source === 'youtube') inYtId.value = cur.ytId || '';
+        if (cur.source === 'video' || cur.source === 'image') inMediaUrl.value = cur.mediaUrl || '';
 
-        const setV = (id, val, fix) => { const el = document.getElementById(id); if (el) { el.value = val; const vEl = document.getElementById(id.replace(/p[123]-/, 'v' + (renderer.activeStyle + 1) + '-')); if (vEl) vEl.innerText = fix !== undefined ? Number(val).toFixed(fix) : val; } };
+        const sIdx = cur.source.startsWith('shader-') ? cur.styleIdx : -1;
+        document.getElementById('btn-select-s1').classList.toggle('active', sIdx === 0);
+        document.getElementById('btn-select-s2').classList.toggle('active', sIdx === 1);
+        document.getElementById('btn-select-s3').classList.toggle('active', sIdx === 2);
+        document.getElementById('container-style-1').style.display = sIdx === 0 ? 'block' : 'none';
+        document.getElementById('container-style-2').style.display = sIdx === 1 ? 'block' : 'none';
+        document.getElementById('container-style-3').style.display = sIdx === 2 ? 'block' : 'none';
+
+        const setV = (id, v, f) => { const el = document.getElementById(id); if (el) { el.value = v; const vl = document.getElementById(id.replace(/p[123]-/, 'v'+(sIdx+1)+'-')); if (vl) vl.innerText = f !== undefined ? Number(v).toFixed(f) : v; } };
         const setC = (id, rgb) => { const el = document.getElementById(id); if (el) el.value = rgbToHex(rgb); };
-
-        if (renderer.activeStyle === 0) {
-          const p = renderer.s1;
-          setV('p1-dot-size', p.dotSize, 3); setV('p1-spacing', p.spacing, 2); setV('p1-max-scale', p.maxScale, 1);
+        if (sIdx === 0) {
+          const p = cur.s1; setV('p1-dot-size', p.dotSize, 3); setV('p1-spacing', p.spacing, 2); setV('p1-max-scale', p.maxScale, 1);
           setV('p1-wave-mod', p.waveMod, 1); setV('p1-color-react', p.colorReact, 2); setV('p1-segments', p.segments);
           setV('p1-twist', p.twist, 2); setV('p1-zoom', p.zoom, 2); setV('p1-ring-scale', p.ringScale, 2);
           setC('p1-dot-color', p.dotColor);
-          const cbK = document.getElementById('p1-kaleido-enable'); if (cbK) cbK.checked = !!p.kaleidoEnable;
-          const cbC = document.getElementById('p1-concentric-enable'); if (cbC) cbC.checked = !!p.concentricEnable;
-        } else if (renderer.activeStyle === 1) {
-          const p = renderer.s2;
-          setC('p2-col-shadow', p.colShadow); setC('p2-col-mid', p.colMid); setC('p2-col-high', p.colHigh); setC('p2-col-c4', p.colC4);
-          setV('p2-bg-fill', p.bgFill, 2); setV('p2-gap-size', p.gapSize, 1); setV('p2-cell-scale', p.cellScale, 1); setV('p2-grad-shift', p.gradShift, 2);
-          setV('p2-motion-rate', audio.motionRate, 1); setV('p2-idle-speed', p.idleSpeed, 2); setV('p2-splash-force', p.splashForce, 1);
+        } else if (sIdx === 1) {
+          const p = cur.s2; setC('p2-col-shadow', p.colShadow); setC('p2-col-mid', p.colMid); setC('p2-col-high', p.colHigh); setC('p2-col-c4', p.colC4);
+          setV('p2-bg-fill', p.bgFill, 2); setV('p2-gap-size', p.gapSize, 1); setV('p2-cell-scale', p.cellScale, 1);
+          setV('p2-grad-shift', p.gradShift, 2); setV('p2-idle-speed', p.idleSpeed, 2); setV('p2-splash-force', p.splashForce, 1);
           setV('p2-fluid-gloss', p.fluidGloss, 1); setV('p2-irid-sheen', p.iridSheen, 2); setV('p2-visc-tension', p.viscTension, 1);
-        } else {
-          const p = renderer.s3;
-          setV('p3-bump', p.bump, 1); setV('p3-gloss', p.gloss, 1); setV('p3-shadow', p.shadow, 2); setV('p3-chroma', p.chroma, 2);
+        } else if (sIdx === 2) {
+          const p = cur.s3; setV('p3-bump', p.bump, 1); setV('p3-gloss', p.gloss, 1); setV('p3-shadow', p.shadow, 2); setV('p3-chroma', p.chroma, 2);
           setV('p3-segments', p.segments); setV('p3-rot-speed', p.rotSpeed, 2); setV('p3-density', p.density, 1);
           setV('p3-zoom', p.zoom, 2); setV('p3-twist', p.twist, 1); setV('p3-contrast', p.contrast, 1);
           setC('p3-col1', p.col1); setC('p3-col2', p.col2); setC('p3-col3', p.col3);
         }
       }
 
-      function switchStyle(idx) {
-        if (renderer.activeStyle === idx) return;
-        renderer.prevStyle = renderer.activeStyle; renderer.activeStyle = idx; renderer.transStartTime = performance.now();
-        saveAllState(); syncUI();
+      window.addEventListener('surface-sync', syncUI);
+      topSel.addEventListener('change', (e) => manager.setActive(e.target.value));
+      sideSel.addEventListener('change', (e) => manager.setActive(e.target.value));
+      document.getElementById('btn-add-surface').addEventListener('click', () => manager.add());
+      document.getElementById('btn-clone-surface').addEventListener('click', () => manager.clone());
+      document.getElementById('btn-delete-surface').addEventListener('click', () => manager.remove());
+
+      inName.addEventListener('input', (e) => {
+        const cur = manager.getActive(); if (!cur) return;
+        cur.name = e.target.value; if (cur.gridEl) cur.gridEl.querySelector('.quad-grid-badge').innerText = cur.name;
+        topSel.options[topSel.selectedIndex].text = cur.name; sideSel.options[sideSel.selectedIndex].text = cur.name;
+        manager.save();
+      });
+
+      function setSrc(type) {
+        const cur = manager.getActive(); if (!cur) return;
+        cur.source = type; if (type.startsWith('shader-')) cur.styleIdx = parseInt(type.split('-')[1]);
+        manager.rebuildContent(cur); manager.save(); syncUI();
       }
+      inSrc.addEventListener('change', (e) => setSrc(e.target.value));
+      document.getElementById('btn-select-s1').addEventListener('click', () => setSrc('shader-0'));
+      document.getElementById('btn-select-s2').addEventListener('click', () => setSrc('shader-1'));
+      document.getElementById('btn-select-s3').addEventListener('click', () => setSrc('shader-2'));
 
-      document.getElementById('btn-select-s1').addEventListener('click', () => switchStyle(0));
-      document.getElementById('btn-select-s2').addEventListener('click', () => switchStyle(1));
-      document.getElementById('btn-select-s3').addEventListener('click', () => switchStyle(2));
-
-      const btnGrid = document.getElementById('btn-mode-grid'), btnGridSaveExit = document.getElementById('btn-grid-save-exit'), btnHudFloat = document.getElementById('btn-hud-float');
-      btnGrid.addEventListener('click', () => {
-        renderer.isGridMode = true; setHudVisibility(false); btnHudFloat.style.display = 'none'; btnGridSaveExit.style.display = 'flex'; mapper.setVisible(true);
+      const fileIn = document.getElementById('input-media-file');
+      document.getElementById('btn-trigger-media-file').addEventListener('click', () => {
+        fileIn.accept = manager.getActive()?.source === 'video' ? 'video/*' : 'image/*'; fileIn.click();
       });
-      btnGridSaveExit.addEventListener('click', () => {
-        renderer.isGridMode = false; mapper.save(); mapper.setVisible(false); btnGridSaveExit.style.display = 'none'; btnHudFloat.style.display = 'flex'; setHudVisibility(true);
+      fileIn.addEventListener('change', (e) => {
+        const f = e.target.files && e.target.files[0], cur = manager.getActive();
+        if (!f || !cur) return;
+        cur.mediaUrl = URL.createObjectURL(f); inMediaUrl.value = f.name;
+        manager.rebuildContent(cur); manager.save();
       });
-
-      const inputCloudUser = document.getElementById('input-cloud-user'), inputPresetName = document.getElementById('input-preset-name');
-      const selectCloudPresets = document.getElementById('select-cloud-presets'), btnCloudSave = document.getElementById('btn-cloud-save');
-      const btnCloudLoad = document.getElementById('btn-cloud-load'), cloudStatus = document.getElementById('cloud-status');
-
-      function sanitizeKey(str) { return (str || '').trim().toLowerCase().replace(/[^a-z0-9_@.]/g, '_'); }
-      const savedLastUser = localStorage.getItem('audioview_last_user');
-      if (savedLastUser) { inputCloudUser.value = savedLastUser; fetchUserPresetList(savedLastUser); }
-
-      async function fetchUserPresetList(userKey) {
-        if (!db) return;
-        const clean = sanitizeKey(userKey); if (!clean) return;
-        try {
-          const snap = await getDoc(doc(db, "presets", clean));
-          selectCloudPresets.innerHTML = '';
-          if (snap.exists() && snap.data().presets) {
-            const names = Object.keys(snap.data().presets);
-            if (names.length === 0) { selectCloudPresets.innerHTML = '<option value="">Nenhum preset salvo</option>'; return; }
-            names.forEach(name => { const opt = document.createElement('option'); opt.value = name; opt.textContent = name; selectCloudPresets.appendChild(opt); });
-            inputPresetName.value = selectCloudPresets.value;
-          } else { selectCloudPresets.innerHTML = '<option value="">Nenhum preset salvo</option>'; }
-        } catch(e){}
-      }
-
-      inputCloudUser.addEventListener('change', () => fetchUserPresetList(inputCloudUser.value));
-      selectCloudPresets.addEventListener('change', () => { if (selectCloudPresets.value) inputPresetName.value = selectCloudPresets.value; });
-
-      btnCloudSave.addEventListener('click', async () => {
-        if (!db) { cloudStatus.innerText = "Erro: Firebase nao inicializado"; return; }
-        const clean = sanitizeKey(inputCloudUser.value), pName = (inputPresetName.value || '').trim().replace(/[^a-zA-Z0-9_]/g, '_');
-        if (!clean || !pName) { cloudStatus.innerText = "Informe identificador e nome do preset"; return; }
-        cloudStatus.innerText = "Salvando preset na nuvem...";
-        try {
-          const docRef = doc(db, "presets", clean), snap = await getDoc(docRef);
-          let list = (snap.exists() && snap.data().presets) ? snap.data().presets : {};
-          list[pName] = { name: pName, updatedAt: new Date().toISOString(), data: getCompleteSystemPreset() };
-          await setDoc(docRef, { user: clean, updatedAt: new Date().toISOString(), presets: list });
-          localStorage.setItem('audioview_last_user', clean);
-          await fetchUserPresetList(clean); selectCloudPresets.value = pName;
-          cloudStatus.innerText = `Preset ${pName} salvo com sucesso`;
-        } catch (err) { cloudStatus.innerText = "Erro ao salvar: " + err.message; }
+      inMediaUrl.addEventListener('change', (e) => {
+        const cur = manager.getActive(); if (!cur) return;
+        cur.mediaUrl = e.target.value.trim(); manager.rebuildContent(cur); manager.save();
+      });
+      document.getElementById('check-media-muted').addEventListener('change', (e) => {
+        const cur = manager.getActive(); if (!cur) return;
+        cur.mediaMuted = e.target.checked; if (cur.mediaEl && cur.mediaEl.tagName === 'VIDEO') cur.mediaEl.muted = cur.mediaMuted;
+        manager.save();
+      });
+      document.getElementById('check-media-loop').addEventListener('change', (e) => {
+        const cur = manager.getActive(); if (!cur) return;
+        cur.mediaLoop = e.target.checked; if (cur.mediaEl && cur.mediaEl.tagName === 'VIDEO') cur.mediaEl.loop = cur.mediaLoop;
+        manager.save();
       });
 
-      btnCloudLoad.addEventListener('click', async () => {
-        if (!db) { cloudStatus.innerText = "Erro: Firebase nao inicializado"; return; }
-        const clean = sanitizeKey(inputCloudUser.value), pName = (inputPresetName.value || selectCloudPresets.value || '').trim().replace(/[^a-zA-Z0-9_]/g, '_');
-        if (!clean || !pName) { cloudStatus.innerText = "Informe identificador e nome do preset"; return; }
-        cloudStatus.innerText = "Buscando preset na nuvem...";
-        try {
-          const snap = await getDoc(doc(db, "presets", clean));
-          if (!snap.exists() || !snap.data().presets || !snap.data().presets[pName]) { cloudStatus.innerText = `Preset ${pName} nao encontrado`; return; }
-          applyCompleteSystemPreset(snap.data().presets[pName].data);
-          localStorage.setItem('audioview_last_user', clean);
-          cloudStatus.innerText = `Preset ${pName} carregado com sucesso`;
-        } catch (err) { cloudStatus.innerText = "Erro ao carregar: " + err.message; }
+      document.getElementById('btn-apply-youtube').addEventListener('click', () => {
+        const cur = manager.getActive(); if (!cur) return;
+        const yId = parseYt(inYtId.value);
+        if (!yId) { alert("Link ou ID do YouTube inválido."); return; }
+        cur.ytId = yId; manager.rebuildContent(cur); manager.save();
+      });
+      document.getElementById('check-youtube-interactive').addEventListener('change', (e) => {
+        const cur = manager.getActive(); if (!cur) return;
+        cur.ytInteractive = e.target.checked; if (cur.ytBox) cur.ytBox.classList.toggle('interactive', cur.ytInteractive);
+        manager.save();
       });
 
-      document.getElementById('btn-export-json').addEventListener('click', () => {
-        const state = getCompleteSystemPreset(), pName = (inputPresetName.value || 'preset').trim().replace(/[^a-zA-Z0-9_]/g, '_');
-        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' }));
-        a.download = `audioview_${pName}_${new Date().toISOString().slice(0,10)}.json`; a.click();
+      opSlide.addEventListener('input', (e) => {
+        const cur = manager.getActive(); if (!cur) return;
+        cur.opacity = parseFloat(e.target.value); if (cur.dom) cur.dom.style.opacity = cur.opacity;
+        opVal.innerText = cur.opacity.toFixed(2); manager.save();
       });
-      document.getElementById('btn-trigger-import-json').addEventListener('click', () => document.getElementById('input-import-json').click());
-      document.getElementById('input-import-json').addEventListener('change', (e) => {
-        const file = e.target.files && e.target.files[0]; if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-          try { applyCompleteSystemPreset(JSON.parse(evt.target.result)); cloudStatus.innerText = "Preset JSON restaurado com sucesso"; }
-          catch(err) { alert("Arquivo JSON invalido: " + err.message); }
-        };
-        reader.readAsText(file); e.target.value = '';
-      });
+      document.getElementById('btn-surface-center').addEventListener('click', () => manager.center(manager.getActive()));
+      document.getElementById('btn-surface-reset-pins').addEventListener('click', () => manager.resetPins(manager.getActive()));
 
-      function bindSlider(id, target, prop, isFloat = true, step = 2, cb = null) {
-        const el = document.getElementById(id); if (!el) return;
-        const vEl = document.getElementById(id.replace('p-', 'v-').replace(/p[123]-/, 'v' + (renderer.activeStyle + 1) + '-'));
-        el.addEventListener('input', (e) => {
-          const val = isFloat ? parseFloat(e.target.value) : parseInt(e.target.value); target[prop] = val;
-          if (vEl) vEl.innerText = isFloat ? val.toFixed(step) : val;
-          if (cb) cb(val); saveAllState();
-        });
-      }
-      function bindColor(id, target, prop) {
-        const el = document.getElementById(id); if (!el) return;
-        el.addEventListener('input', (e) => { target[prop] = hexToRgb(e.target.value); saveAllState(); });
-      }
+      // Grade de Alinhamento
+      const btnGrid = document.getElementById('btn-mode-grid'), btnGridExit = document.getElementById('btn-grid-save-exit'), btnHud = document.getElementById('btn-hud-float');
+      btnGrid.addEventListener('click', () => { manager.setGrid(true); setHud(false); btnHud.style.display = 'none'; btnGridExit.style.display = 'flex'; });
+      btnGridExit.addEventListener('click', () => { manager.setGrid(false); btnGridExit.style.display = 'none'; btnHud.style.display = 'flex'; setHud(true); });
 
-      ['p-audio-smooth', 'p-audio-sens', 'p-audio-gain', 'p-noise-gate', 'p-bass-att'].forEach(id => {
+      // Sliders dos Shaders
+      function bindS(id, p, isF = true, stp = 2) {
         const el = document.getElementById(id); if (!el) return;
         el.addEventListener('input', (e) => {
-          const prop = id === 'p-audio-smooth' ? 'smoothing' : (id === 'p-audio-sens' ? 'sens' : (id === 'p-audio-gain' ? 'gain' : (id === 'p-noise-gate' ? 'gate' : 'bassAtt')));
-          const v = parseFloat(e.target.value), cfg = renderer.getActiveConfig(); if (!cfg.audio) cfg.audio = {};
-          cfg.audio[prop] = v; audio[prop] = v;
-          if (prop === 'gain' && audio.gainNode) audio.gainNode.gain.value = v;
-          if (prop === 'smoothing' && audio.analyser) audio.analyser.smoothingTimeConstant = v;
-          document.getElementById(id.replace('p-', 'v-')).innerText = v.toFixed(prop === 'sens' || prop === 'gain' ? 1 : 2);
-          saveAllState();
+          const cur = manager.getActive(); if (!cur) return;
+          const v = isF ? parseFloat(e.target.value) : parseInt(e.target.value);
+          const t = cur.styleIdx === 0 ? cur.s1 : (cur.styleIdx === 1 ? cur.s2 : cur.s3);
+          t[p] = v;
+          const vEl = document.getElementById(id.replace(/p[123]-/, 'v'+(cur.styleIdx+1)+'-'));
+          if (vEl) vEl.innerText = isF ? v.toFixed(stp) : v; manager.save();
         });
-      });
+      }
+      function bindC(id, p) {
+        const el = document.getElementById(id); if (!el) return;
+        el.addEventListener('input', (e) => {
+          const cur = manager.getActive(); if (!cur) return;
+          const t = cur.styleIdx === 0 ? cur.s1 : (cur.styleIdx === 1 ? cur.s2 : cur.s3);
+          t[p] = hexToRgb(e.target.value); manager.save();
+        });
+      }
+      bindS('p1-dot-size', 'dotSize', true, 3); bindS('p1-spacing', 'spacing', true, 2); bindS('p1-max-scale', 'maxScale', true, 1);
+      bindS('p1-wave-mod', 'waveMod', true, 1); bindS('p1-color-react', 'colorReact', true, 2); bindS('p1-segments', 'segments', false);
+      bindS('p1-twist', 'twist', true, 2); bindS('p1-zoom', 'zoom', true, 2); bindS('p1-ring-scale', 'ringScale', true, 2); bindC('p1-dot-color', 'dotColor');
+      document.getElementById('p1-kaleido-enable').addEventListener('change', (e) => { const c = manager.getActive(); if (c) { c.s1.kaleidoEnable = e.target.checked; manager.save(); } });
+      document.getElementById('p1-concentric-enable').addEventListener('change', (e) => { const c = manager.getActive(); if (c) { c.s1.concentricEnable = e.target.checked; manager.save(); } });
 
-      bindSlider('p1-dot-size', renderer.s1, 'dotSize', true, 3);
-      bindSlider('p1-spacing', renderer.s1, 'spacing', true, 2);
-      bindSlider('p1-max-scale', renderer.s1, 'maxScale', true, 1);
-      bindSlider('p1-wave-mod', renderer.s1, 'waveMod', true, 1);
-      bindSlider('p1-color-react', renderer.s1, 'colorReact', true, 2);
-      bindSlider('p1-segments', renderer.s1, 'segments', false);
-      bindSlider('p1-twist', renderer.s1, 'twist', true, 2);
-      bindSlider('p1-zoom', renderer.s1, 'zoom', true, 2);
-      bindSlider('p1-ring-scale', renderer.s1, 'ringScale', true, 2);
-      bindColor('p1-dot-color', renderer.s1, 'dotColor');
-      document.getElementById('p1-kaleido-enable').addEventListener('change', (e) => { renderer.s1.kaleidoEnable = e.target.checked; saveAllState(); });
-      document.getElementById('p1-concentric-enable').addEventListener('change', (e) => { renderer.s1.concentricEnable = e.target.checked; saveAllState(); });
-
-      bindColor('p2-col-shadow', renderer.s2, 'colShadow');
-      bindColor('p2-col-mid', renderer.s2, 'colMid');
-      bindColor('p2-col-high', renderer.s2, 'colHigh');
-      bindColor('p2-col-c4', renderer.s2, 'colC4');
-      bindSlider('p2-bg-fill', renderer.s2, 'bgFill', true, 2);
-      bindSlider('p2-gap-size', renderer.s2, 'gapSize', true, 1);
-      bindSlider('p2-cell-scale', renderer.s2, 'cellScale', true, 1);
-      bindSlider('p2-grad-shift', renderer.s2, 'gradShift', true, 2);
-      bindSlider('p2-idle-speed', renderer.s2, 'idleSpeed', true, 2);
-      bindSlider('p2-splash-force', renderer.s2, 'splashForce', true, 1);
-      bindSlider('p2-fluid-gloss', renderer.s2, 'fluidGloss', true, 1);
-      bindSlider('p2-irid-sheen', renderer.s2, 'iridSheen', true, 2);
-      bindSlider('p2-visc-tension', renderer.s2, 'viscTension', true, 1);
+      bindC('p2-col-shadow', 'colShadow'); bindC('p2-col-mid', 'colMid'); bindC('p2-col-high', 'colHigh'); bindC('p2-col-c4', 'colC4');
+      bindS('p2-bg-fill', 'bgFill', true, 2); bindS('p2-gap-size', 'gapSize', true, 1); bindS('p2-cell-scale', 'cellScale', true, 1);
+      bindS('p2-grad-shift', 'gradShift', true, 2); bindS('p2-idle-speed', 'idleSpeed', true, 2); bindS('p2-splash-force', 'splashForce', true, 1);
+      bindS('p2-fluid-gloss', 'fluidGloss', true, 1); bindS('p2-irid-sheen', 'iridSheen', true, 2); bindS('p2-visc-tension', 'viscTension', true, 1);
       document.getElementById('p2-motion-rate').addEventListener('input', (e) => { audio.motionRate = parseFloat(e.target.value); document.getElementById('v2-motion-rate').innerText = audio.motionRate.toFixed(1); });
 
-      bindSlider('p3-bump', renderer.s3, 'bump', true, 1);
-      bindSlider('p3-gloss', renderer.s3, 'gloss', true, 1);
-      bindSlider('p3-shadow', renderer.s3, 'shadow', true, 2);
-      bindSlider('p3-chroma', renderer.s3, 'chroma', true, 2);
-      bindSlider('p3-segments', renderer.s3, 'segments', false);
-      bindSlider('p3-rot-speed', renderer.s3, 'rotSpeed', true, 2);
-      bindSlider('p3-density', renderer.s3, 'density', true, 1);
-      bindSlider('p3-zoom', renderer.s3, 'zoom', true, 2);
-      bindSlider('p3-twist', renderer.s3, 'twist', true, 1);
-      bindSlider('p3-contrast', renderer.s3, 'contrast', true, 1);
-      bindColor('p3-col1', renderer.s3, 'col1');
-      bindColor('p3-col2', renderer.s3, 'col2');
-      bindColor('p3-col3', renderer.s3, 'col3');
+      bindS('p3-bump', 'bump', true, 1); bindS('p3-gloss', 'gloss', true, 1); bindS('p3-shadow', 'shadow', true, 2); bindS('p3-chroma', 'chroma', true, 2);
+      bindS('p3-segments', 'segments', false); bindS('p3-rot-speed', 'rotSpeed', true, 2); bindS('p3-density', 'density', true, 1);
+      bindS('p3-zoom', 'zoom', true, 2); bindS('p3-twist', 'twist', true, 1); bindS('p3-contrast', 'contrast', true, 1);
+      bindC('p3-col1', 'col1'); bindC('p3-col2', 'col2'); bindC('p3-col3', 'col3');
 
-      const btnMicToggle = document.getElementById('btn-toggle-mic'), selectAudio = document.getElementById('select-audio-input');
+      // Sliders Áudio
+      ['p-audio-smooth', 'p-audio-sens', 'p-audio-gain', 'p-noise-gate', 'p-bass-att'].forEach(id => {
+        document.getElementById(id).addEventListener('input', (e) => {
+          const p = id === 'p-audio-smooth' ? 'smoothing' : (id === 'p-audio-sens' ? 'sens' : (id === 'p-audio-gain' ? 'gain' : (id === 'p-noise-gate' ? 'gate' : 'bassAtt')));
+          const v = parseFloat(e.target.value); audio[p] = v;
+          if (p === 'gain' && audio.gainNode) audio.gainNode.gain.value = v;
+          if (p === 'smoothing' && audio.analyser) audio.analyser.smoothingTimeConstant = v;
+          document.getElementById(id.replace('p-', 'v-')).innerText = v.toFixed(p === 'sens' || p === 'gain' ? 1 : 2);
+        });
+      });
+
+      // Mic
+      const btnMic = document.getElementById('btn-toggle-mic'), selIn = document.getElementById('select-audio-input');
       document.getElementById('btn-close-modal').addEventListener('click', () => document.getElementById('permission-modal').classList.remove('active'));
-
-      async function listInputs() {
+      async function listMics() {
         try {
-          const devs = await navigator.mediaDevices.enumerateDevices(), inputs = devs.filter(d => d.kind === 'audioinput');
-          selectAudio.innerHTML = '';
-          inputs.forEach((d, i) => { const opt = document.createElement('option'); opt.value = d.deviceId; opt.text = d.label || `Mic ${i + 1}`; selectAudio.appendChild(opt); });
+          const devs = await navigator.mediaDevices.enumerateDevices(), ins = devs.filter(d => d.kind === 'audioinput');
+          selIn.innerHTML = ''; ins.forEach((d, i) => selIn.appendChild(new Option(d.label || `Mic ${i+1}`, d.deviceId)));
         } catch(e){}
       }
-
-      btnMicToggle.addEventListener('click', async () => {
+      btnMic.addEventListener('click', async () => {
         if (audio.isMuted) {
           try {
-            await audio.init(selectAudio.value); await listInputs();
-            btnMicToggle.classList.add('active'); btnMicToggle.innerText = "MIC ON"; requestWakeLock();
-          } catch(err) {
-            document.getElementById('modal-msg').innerText = "Permissao negada ou contexto inseguro. Abra via HTTPS ou ative a permissao de microfone.";
-            document.getElementById('permission-modal').classList.add('active');
-          }
-        } else {
-          audio.disconnect(); btnMicToggle.classList.remove('active'); btnMicToggle.innerText = "MIC OFF";
-        }
+            await audio.init(selIn.value); await listMics();
+            btnMic.classList.add('active'); btnMic.innerText = "MIC ON";
+          } catch(e) { document.getElementById('permission-modal').classList.add('active'); }
+        } else { audio.disconnect(); btnMic.classList.remove('active'); btnMic.innerText = "MIC OFF"; }
       });
-      selectAudio.addEventListener('change', () => { if (!audio.isMuted) audio.init(selectAudio.value); });
+      selIn.addEventListener('change', () => { if (!audio.isMuted) audio.init(selIn.value); });
 
-      const drawer = document.getElementById('sidebar-drawer'), btnToggleDrawer = document.getElementById('btn-toggle-drawer'), topBar = document.getElementById('top-bar');
-      let isHudVisible = true;
-      function setHudVisibility(v) {
-        isHudVisible = v;
-        topBar.classList.toggle('hidden', !v); drawer.classList.toggle('collapsed', !v); btnToggleDrawer.classList.toggle('active', v);
-        btnHudFloat.classList.toggle('hidden-hud', !v); btnHudFloat.innerText = v ? "OCULTAR HUD" : "MOSTRAR HUD";
+      // Firebase
+      const inCloudUser = document.getElementById('input-cloud-user'), inCloudPreset = document.getElementById('input-preset-name');
+      const selCloud = document.getElementById('select-cloud-presets'), status = document.getElementById('cloud-status');
+      const cleanK = (s) => (s||'').trim().toLowerCase().replace(/[^a-z0-9_@.]/g, '_');
+      async function fetchPresets(u) {
+        if (!db) return; const c = cleanK(u); if (!c) return;
+        try {
+          const snap = await getDoc(doc(db, "presets", c)); selCloud.innerHTML = '';
+          if (snap.exists() && snap.data().presets) {
+            Object.keys(snap.data().presets).forEach(n => selCloud.appendChild(new Option(n, n)));
+            inCloudPreset.value = selCloud.value;
+          } else { selCloud.appendChild(new Option("Nenhum salvo", "")); }
+        } catch(e){}
       }
-      btnHudFloat.addEventListener('click', () => setHudVisibility(!isHudVisible));
-      btnToggleDrawer.addEventListener('click', () => { drawer.classList.toggle('collapsed'); btnToggleDrawer.classList.toggle('active'); });
-      document.getElementById('btn-toggle-pins').addEventListener('click', () => mapper.togglePins());
-      document.getElementById('btn-reset-warp').addEventListener('click', () => { mapper.reset(); handleResize(); });
-      document.getElementById('btn-fullscreen').addEventListener('click', () => { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); });
+      inCloudUser.addEventListener('change', () => fetchPresets(inCloudUser.value));
+      selCloud.addEventListener('change', () => { if (selCloud.value) inCloudPreset.value = selCloud.value; });
+
+      document.getElementById('btn-cloud-save').addEventListener('click', async () => {
+        if (!db) { status.innerText = "Firebase offline"; return; }
+        const u = cleanK(inCloudUser.value), p = (inCloudPreset.value || '').trim().replace(/[^a-zA-Z0-9_]/g, '_');
+        if (!u || !p) { status.innerText = "Preencha usuário e preset"; return; }
+        status.innerText = "Salvando...";
+        try {
+          const dRef = doc(db, "presets", u), snap = await getDoc(dRef);
+          let l = (snap.exists() && snap.data().presets) ? snap.data().presets : {};
+          l[p] = { name: p, data: manager.exportPreset() };
+          await setDoc(dRef, { user: u, presets: l });
+          await fetchPresets(u); selCloud.value = p; status.innerText = `Salvo: ${p}`;
+        } catch(e) { status.innerText = "Erro: " + e.message; }
+      });
+      document.getElementById('btn-cloud-load').addEventListener('click', async () => {
+        if (!db) return;
+        const u = cleanK(inCloudUser.value), p = (inCloudPreset.value || selCloud.value || '').trim().replace(/[^a-zA-Z0-9_]/g, '_');
+        try {
+          const snap = await getDoc(doc(db, "presets", u));
+          if (!snap.exists() || !snap.data().presets[p]) { status.innerText = "Não encontrado"; return; }
+          manager.importPreset(snap.data().presets[p].data); syncUI(); status.innerText = `Carregado: ${p}`;
+        } catch(e) { status.innerText = "Erro: " + e.message; }
+      });
+
+      // JSON
+      document.getElementById('btn-export-json').addEventListener('click', () => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([JSON.stringify(manager.exportPreset(), null, 2)], { type: 'application/json' }));
+        a.download = `audioview_${new Date().toISOString().slice(0,10)}.json`; a.click();
+      });
+      const inJson = document.getElementById('input-import-json');
+      document.getElementById('btn-trigger-import-json').addEventListener('click', () => inJson.click());
+      inJson.addEventListener('change', (e) => {
+        const f = e.target.files && e.target.files[0]; if (!f) return;
+        const r = new FileReader();
+        r.onload = (evt) => { try { manager.importPreset(JSON.parse(evt.target.result)); syncUI(); alert("Importado!"); } catch(err){ alert("JSON inválido"); } };
+        r.readAsText(f);
+      });
+
+      // HUD e Geral
+      const drawer = document.getElementById('sidebar-drawer'), btnDrawer = document.getElementById('btn-toggle-drawer'), topBar = document.getElementById('top-bar');
+      let hudV = true;
+      function setHud(v) {
+        hudV = v; topBar.classList.toggle('hidden', !v); drawer.classList.toggle('collapsed', !v);
+        btnDrawer.classList.toggle('active', v); btnHud.classList.toggle('hidden-hud', !v);
+        btnHud.innerText = v ? "OCULTAR HUD" : "MOSTRAR HUD";
+      }
+      btnHud.addEventListener('click', () => setHud(!hudV));
+      btnDrawer.addEventListener('click', () => { drawer.classList.toggle('collapsed'); btnDrawer.classList.toggle('active'); });
+      document.getElementById('btn-toggle-pins').addEventListener('click', () => { manager.pinsVisible = !manager.pinsVisible; manager.syncPins(); });
+      document.getElementById('btn-fullscreen').addEventListener('click', () => { !document.fullscreenElement ? document.documentElement.requestFullscreen() : document.exitFullscreen(); });
+      document.getElementById('btn-reset-all').addEventListener('click', () => { if (confirm("Resetar todas as áreas?")) manager.surfaces.forEach(s => manager.resetPins(s)); });
 
       syncUI();
     });
